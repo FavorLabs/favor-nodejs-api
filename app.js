@@ -30,7 +30,6 @@ const feelingRoutes = require('./routes/feelings')
 const subscriptionRoutes = require('./routes/subscriptions')
 const historiesRoutes = require('./routes/histories')
 const searchRoutes = require('./routes/search')
-const SettlementRoutes = require('./routes/settlement')
 
 const app = express()
 
