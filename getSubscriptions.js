@@ -9,16 +9,16 @@ const Config = require('./models/Config')
 const Subscription = require('./models/Subscription')
 const User = require('./models/User')
 
-const jsonInterface = require('./config/')
+const jsonInterface = require('./config/FavorTube.json')
 
-const address = "";
+const address = "0x4DDBFFE095e1b7f5B92C50d5Da78Efd2546Df298"
 
 class process extends events{
     constructor(number) {
         super();
         this.stage = 50
         this.number = number;
-        this.eth = new Web3('https://chain.favorlabs.io:8545')
+        this.eth = new Web3('https://polygon-testnet.blastapi.io/18d7884b-202d-467d-8221-25eba9c8eca1')
         this.contract = new this.eth.Contract(jsonInterface.abi, address);
         this.on('start',this.start)
     }
@@ -32,7 +32,7 @@ class process extends events{
                 toBlock = db.number;
             }
 
-            let events = await this.contract.getPastEvents('$SetAuthorization', {
+            let events = await this.contract.getPastEvents('$subscribe', {
                 filter: {}, // Using an array means OR: e.g. 20 or 23
                 fromBlock: this.number,
                 toBlock: toBlock
@@ -85,7 +85,7 @@ let main = async ()=>{
 
     let last = await Config.findOne({key:"Authorization"})
 
-    let number = last && last.value || 19143506  ;
+    let number = last && last.value || 26781754  ;
 
     let pro = new process(number);
 
