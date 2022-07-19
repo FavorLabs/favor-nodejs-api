@@ -27,9 +27,10 @@ class process extends events{
         try{
 
             let db = await this.eth.getBlock(this.eth.defaultBlock);
+            let dbNumber = db.number -1;
             let toBlock = this.number+this.stage-1;
-            if(db.number < toBlock){
-                toBlock = db.number;
+            if(dbNumber < toBlock){
+                toBlock = dbNumber;
             }
 
             let events = await this.contract.getPastEvents('$subscribe', {
