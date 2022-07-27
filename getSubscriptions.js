@@ -28,6 +28,9 @@ class process extends events{
 
             let db = await this.eth.getBlock(this.eth.defaultBlock);
             let dbNumber = db.number -1;
+            if(dbNumber<this.number){
+                throw new Error("get dbNumber error");
+            }
             let toBlock = this.number+this.stage-1;
             if(dbNumber < toBlock){
                 toBlock = dbNumber;
@@ -70,7 +73,7 @@ class process extends events{
 
             setTimeout(()=>{
                 this.emit('start')
-            },this.number >= db.number?3000:5)
+            },this.number >= dbNumber?2000:5)
         }
         catch (e){
             console.error(`some error: ${e}`.red);
