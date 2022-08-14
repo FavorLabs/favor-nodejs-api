@@ -109,6 +109,17 @@ exports.updateDetails = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: user })
 })
 
+exports.updateSecret = asyncHandler(async (req, res, next) => {
+  const fieldsToUpdate = {
+    secret:req.body.secret
+  }
+  const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
+    runValidators: true,
+  })
+
+  res.status(200).json({ success: true, data: fieldsToUpdate })
+})
+
 // @desc    Upload avatar
 // @route   PUT /api/v1/users
 // @access  Private

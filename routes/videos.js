@@ -11,6 +11,7 @@ const {
 } = require('../controllers/videos')
 
 const Video = require('../models/Video')
+const VideoList = require('../models/VideoList')
 
 const router = express.Router()
 
@@ -43,7 +44,7 @@ router
   .route('/public')
   .get(
     advancedResults(
-      Video,
+      VideoList,
       [
         { path: 'userId' },
         { path: 'categoryId' },

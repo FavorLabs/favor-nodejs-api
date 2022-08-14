@@ -9,6 +9,7 @@ const {
   forgotPassword,
   resetPassword,
   updateDetails,
+  updateSecret,
   uploadChannelAvatar,
   updatePassword
 } = require('../controllers/auth')
@@ -20,6 +21,7 @@ router.post('/login', login)
 router.post('/logout', logout)
 router.post('/me', protect, getMe)
 router.put('/updatedetails', protect, updateDetails)
+router.put('/updatesecret', protect, updateSecret)
 router.put('/avatar', protect, uploadChannelAvatar)
 // router.put('/updatepassword', protect, updatePassword)
 // router.post('/forgotpassword', forgotPassword)

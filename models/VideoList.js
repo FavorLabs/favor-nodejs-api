@@ -2,7 +2,7 @@ const mongoose = require('mongoose')
 
 const Schema = mongoose.Schema
 
-const VideoSchema = new Schema(
+const VideoListSchema = new Schema(
   {
     title: {
       type: String,
@@ -29,22 +29,24 @@ const VideoSchema = new Schema(
       default: 'draft'
     },
     categoryId: {
-      type: mongoose.Schema.ObjectId,
+      type: Object,
       ref: 'Category'
     },
     userId: {
       type: mongoose.Schema.ObjectId,
       ref: 'User',
       required: true
-    }
+    },
+      user:{
+          type: mongoose.Schema.ObjectId,
+      }
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
 )
 
-VideoSchema.index({ title: 'text' })
-VideoSchema.index({ userId: 1 })
 
-VideoSchema.virtual('dislikes', {
+
+VideoListSchema.virtual('dislikes', {
   ref: 'Feeling',
   localField: '_id',
   foreignField: 'videoId',
@@ -53,7 +55,7 @@ VideoSchema.virtual('dislikes', {
   match: { type: 'dislike' }
 })
 
-VideoSchema.virtual('likes', {
+VideoListSchema.virtual('likes', {
   ref: 'Feeling',
   localField: '_id',
   foreignField: 'videoId',
@@ -62,7 +64,7 @@ VideoSchema.virtual('likes', {
   match: { type: 'like' }
 })
 
-VideoSchema.virtual('comments', {
+VideoListSchema.virtual('comments', {
   ref: 'Comment',
   localField: '_id',
   foreignField: 'videoId',
@@ -70,4 +72,4 @@ VideoSchema.virtual('comments', {
   count: true
 })
 
-module.exports = mongoose.model('Video', VideoSchema)
+module.exports = mongoose.model('VideoList', VideoListSchema)

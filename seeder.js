@@ -47,10 +47,41 @@ const deleteData = async () => {
 	}
 }
 
+const initView = async () =>{
+	try {
+		// await User.deleteMany()
+		await mongoose.connection.dropCollection("videolists");
+		await mongoose.connection.createCollection(
+			"videolists",
+			{viewOn:"videos",
+			pipeline:[     {
+				"$lookup": {
+					"from": "users",
+					"localField": "userId",
+					"foreignField": "_id",
+					"as": "user"
+				}
+			},
+				{
+					"$unwind": "$user"
+				} ]}
+		)
+
+		process.exit()
+	} catch (err) {
+		console.error(err)
+	}
+}
+
 if (process.argv[2] === '-i') {
 	// node seeder -i
 	importData()
 } else if (process.argv[2] === '-d') {
 	// node seeder -d
 	deleteData()
+} else if (process.argv[2] === '-v') {
+	// node seeder -d
+	initView()
+}else {
+	process.exit()
 }

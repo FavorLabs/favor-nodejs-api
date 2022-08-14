@@ -31,5 +31,6 @@ CommentSchema.virtual('replies', {
 
   options: { sort: { createdAt: -1 } }
 })
-
+CommentSchema.index({ userId: 1 })
+CommentSchema.index({ videoId: 1 })
 module.exports = mongoose.model('Comment', CommentSchema)

@@ -46,7 +46,11 @@ const UserSchema = new Schema(
     //   select: false
     // },
     resetPasswordToken: String,
-    resetPasswordExpire: Date
+    resetPasswordExpire: Date,
+      secret:{
+          type: Boolean,
+          default:false
+      },
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
 )

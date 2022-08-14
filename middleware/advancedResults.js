@@ -15,7 +15,11 @@ const advancedResults = (
       delete req.query.userId
     }
   } else if (visibility.status == 'public') {
-    req.query.status = 'public'
+
+    req.query.status = {in:['public','member']}
+        if(!req.query.userId){
+          req.query["user.secret"] = {ne:true}
+        }
   }
 
   const reqQuery = { ...req.query }
@@ -24,7 +28,7 @@ const advancedResults = (
   removeFields.forEach((param) => delete reqQuery[param])
 
   let queryStr = JSON.stringify(reqQuery)
-  queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in)\b/g, (match) => `$${match}`)
+  queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in|ne)\b/g, (match) => `$${match}`)
 
   query = model.find(JSON.parse(queryStr))
 
