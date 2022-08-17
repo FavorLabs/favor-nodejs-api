@@ -1,6 +1,6 @@
 const asyncHandler = require('../middleware/async')
 
-const VideoList = require('../models/VideoList')
+const Video = require('../models/Video')
 const User = require('../models/User')
 
 // @desc    Search for videos and channels
@@ -12,7 +12,7 @@ exports.search = asyncHandler(async (req, res, next) => {
   let channels = await User.find({ $text: { $search: text } }).populate({
     path: 'videos'
   })
-  const videos = await VideoList.find({ $text: { $search: text },secret:{$ne:true} }).populate({
+  const videos = await Video.find({ $text: { $search: text } }).populate({
     path: 'userId'
   })
 
