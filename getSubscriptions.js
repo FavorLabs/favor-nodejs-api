@@ -89,10 +89,10 @@ class processor extends events{
 
             let setBulk = [];
 
-            await P.map(setEvents,async ({transactionHash,returnValues})=>{
+                await P.map(setEvents,async ({transactionHash,returnValues})=>{
                 setBulk.push({ updateOne :
                         {
-                            "filter": {address : returnValues.owner},
+                            "filter": {address : returnValues.owner.toLowerCase()},
                             "update":{
                                 $set:{
                                     mode: returnValues.mode,
@@ -106,7 +106,7 @@ class processor extends events{
             });
 
             if(setBulk.length >0){
-                await User.bulkWrite(subBulk);
+                await User.bulkWrite(setBulk);
             }
 
             console.log(`block ${toBlock} ok`.green)
