@@ -89,10 +89,10 @@ class process extends events{
 
             let setBulk = [];
 
-            await P.map(setEvents,async ({transactionHash,address,returnValues})=>{
+            await P.map(setEvents,async ({transactionHash,returnValues})=>{
                 setBulk.push({ updateOne :
                         {
-                            "filter": {address : address},
+                            "filter": {address : returnValues.owner},
                             "update":{
                                 $set:{
                                     mode: returnValues.mode,
