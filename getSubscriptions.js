@@ -68,7 +68,9 @@ class process extends events{
                         "filter": {expire:{$lt:toBlock},tx:{$ne:""}},
                         "update":
                             {
+                                $set:{
                                 tx: "",
+                                }
                             },
                         "upsert": false
                     }
@@ -91,12 +93,13 @@ class process extends events{
                 setBulk.push({ updateOne :
                         {
                             "filter": {address : address},
-                            "update":
-                                {
+                            "update":{
+                                $set:{
                                     mode: returnValues.mode,
                                     price:returnValues.price,
                                     tx:transactionHash
-                                },
+                                }
+                            },
                             "upsert": false
                         }
                 })
