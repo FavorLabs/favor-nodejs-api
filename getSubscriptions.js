@@ -36,20 +36,20 @@ class process extends events{
                 toBlock = dbNumber;
             }
 
-            let events = await this.contract.getPastEvents('$subscribe', {
+            let subEvents = await this.contract.getPastEvents('$subscribe', {
                 filter: {}, // Using an array means OR: e.g. 20 or 23
                 fromBlock: this.number,
                 toBlock: toBlock
             });
-            console.log(`get ${events.length} trans from ${this.number} to ${toBlock} block ok `.green)
+            console.log(`get sub ${subEvents.length} trans from ${this.number} to ${toBlock} block ok `.green)
 
-            let bulk = [];
+            let subBulk = [];
 
-            await P.map(events,async ({transactionHash,returnValues})=>{
+            await P.map(subEvents,async ({transactionHash,returnValues})=>{
                 let owner =  await  User.findOne({address:returnValues.owner.toLowerCase()});
                 let licensee = await  User.findOne({address:returnValues.licensee.toLowerCase()});
                 if(owner && licensee){
-                    bulk.push({ updateOne :
+                    subBulk.push({ updateOne :
                             {
                                 "filter": {subscriberId : licensee.id,channelId:owner.id},
                                 "update":
@@ -63,8 +63,47 @@ class process extends events{
                 }
             });
 
-            if(bulk.length >0){
-                await Subscription.bulkWrite(bulk);
+            subBulk.push({ updateMany :
+                    {
+                        "filter": {expire:{$lt:toBlock}},
+                        "update":
+                            {
+                                tx: "",
+                            },
+                        "upsert": false
+                    }
+            })
+
+            if(subBulk.length >0){
+                await Subscription.bulkWrite(subBulk);
+            }
+
+            let setEvents = await this.contract.getPastEvents('$setUserConfig', {
+                filter: {}, // Using an array means OR: e.g. 20 or 23
+                fromBlock: this.number,
+                toBlock: toBlock
+            });
+            console.log(`get set ${setEvents.length} trans from ${this.number} to ${toBlock} block ok `.green)
+
+            let setBulk = [];
+
+            await P.map(setEvents,async ({transactionHash,address,returnValues})=>{
+                setBulk.push({ updateOne :
+                        {
+                            "filter": {address : address},
+                            "update":
+                                {
+                                    mode: returnValues.mode,
+                                    price:returnValues.price,
+                                    tx:transactionHash
+                                },
+                            "upsert": false
+                        }
+                })
+            });
+
+            if(setBulk.length >0){
+                await User.bulkWrite(subBulk);
             }
 
             console.log(`block ${toBlock} ok`.green)

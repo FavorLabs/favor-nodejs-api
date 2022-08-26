@@ -51,6 +51,17 @@ const UserSchema = new Schema(
           type: Boolean,
           default:false
       },
+      mode:{
+          type: Number,
+          default:0
+      },
+      price:{
+          type: Number,
+      },
+      tx:{
+        type:String,
+        default:""
+      }
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
 )
