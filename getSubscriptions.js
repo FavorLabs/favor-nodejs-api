@@ -65,7 +65,7 @@ class process extends events{
 
             subBulk.push({ updateMany :
                     {
-                        "filter": {expire:{$lt:toBlock}},
+                        "filter": {expire:{$lt:toBlock},tx:{$ne:""}},
                         "update":
                             {
                                 tx: "",

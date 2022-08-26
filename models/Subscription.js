@@ -15,10 +15,12 @@ const SubscriptionSchema = new Schema(
       required: true
     },
     tx:{
-        type:String
+        type:String,
+        default:""
     },
     expire:{
-        type:Number
+        type:Number,
+        default:0
     }
   },
   { timestamps: true }
