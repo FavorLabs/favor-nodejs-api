@@ -13,7 +13,7 @@ const jsonInterface = require('./config/FavorTube.json')
 
 const address = process.env.CONTRACT
 
-class process extends events{
+class processor extends events{
     constructor(number) {
         super();
         this.stage = 50
@@ -133,7 +133,7 @@ let main = async ()=>{
 
     let number = last && last.value || parseInt(process.env.NUMBER)  ;
 
-    let pro = new process(number);
+    let pro = new processor(number);
 
     pro.emit('start');
 
