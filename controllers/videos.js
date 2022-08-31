@@ -27,9 +27,9 @@ exports.getVideo = asyncHandler(async (req, res, next) => {
   if (!video) {
     return next(new ErrorResponse(`No video with that id of ${req.params.id}`))
   }
+    video.registered = !!(video.oracle && video.oracle.length>0) ;
     video.oracle = undefined;
-  video.registered = !!(video.oracle && video.oracle.length>0) ;
-  res.status(200).json({ sucess: true, data: video })
+  res.status(200).json({ success: true, data: video })
 })
 
 exports.undone = asyncHandler(async (req, res, next) => {
