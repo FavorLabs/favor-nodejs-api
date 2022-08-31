@@ -65,6 +65,12 @@ const advancedResults = (
 
   const results = await query
 
+  if(model.modelName == "VideoList" || model.modelName == "Video"){
+    results.forEach((item)=>{
+      item.registered = !!(item.oracle && item.oracle.length>0)
+      item.oracle = undefined;
+    })
+  }
   // Pagination result
   const pagination = {}
 

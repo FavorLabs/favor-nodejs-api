@@ -21,8 +21,13 @@ const VideoSchema = new Schema(
       default: 0
     },
     url: {
-      type: String
+      type: String,
+        default:""
     },
+      overlay: {
+          type: String,
+          default:""
+      },
     status: {
       type: String,
       enum: ['draft', 'private', 'public','member'],
@@ -36,6 +41,10 @@ const VideoSchema = new Schema(
       type: mongoose.Schema.ObjectId,
       ref: 'User',
       required: true
+    },
+    oracle:{
+        type: [String],
+        default: []
     }
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
@@ -43,6 +52,12 @@ const VideoSchema = new Schema(
 
 VideoSchema.index({ title: 'text' })
 VideoSchema.index({ userId: 1 })
+VideoSchema.index({ url: 1 })
+
+VideoSchema.virtual("registered")
+//     .get(function (){
+//     return !!(this.oracle && this.oracle.length>0)
+// })
 
 VideoSchema.virtual('dislikes', {
   ref: 'Feeling',

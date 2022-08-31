@@ -23,6 +23,10 @@ const VideoListSchema = new Schema(
     url: {
       type: String
     },
+      overlay: {
+          type: String,
+          default:""
+      },
     status: {
       type: String,
       enum: ['draft', 'private', 'public','member'],
@@ -37,15 +41,20 @@ const VideoListSchema = new Schema(
       ref: 'User',
       required: true
     },
+      oracle:{
+          type: [String],
+          default: []
+      },
       user:{
           type: mongoose.Schema.ObjectId,
       }
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
 )
-
-
-
+VideoListSchema.virtual("registered")
+//     .get(function (){
+//     return !!(this.oracle && this.oracle.length>0)
+// })
 VideoListSchema.virtual('dislikes', {
   ref: 'Feeling',
   localField: '_id',

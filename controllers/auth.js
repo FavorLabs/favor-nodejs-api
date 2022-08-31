@@ -65,7 +65,7 @@ exports.login = asyncHandler(async (req, res, next) => {
   const user = await User.findOne({ address })
 
   if (!user) {
-    return next(new ErrorResponse('Invalid credentials', 400))
+    return next(new ErrorResponse('Please Create Account', 400))
   }
 
   sendTokenResponse(user, 200, res)
