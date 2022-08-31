@@ -15,7 +15,7 @@ const advancedResults = (
       delete req.query.userId
     }
   } else if (visibility.status == 'public') {
-
+    req.query["oracle.0"] = {$exists: true}
     req.query.status = {in:['public','member']}
         if(!req.query.userId){
           req.query["user.secret"] = {ne:true}

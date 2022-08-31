@@ -27,6 +27,7 @@ exports.getUser = asyncHandler(async (req, res, next) => {
 // @route   POST /api/v1/auth/users
 // @access  Private/Admin
 exports.createUser = asyncHandler(async (req, res, next) => {
+  req.body.channelName = (req.body.channelName || "").trim();
   const user = await User.create(req.body)
 
   res.status(201).json({ success: true, data: user })
@@ -38,7 +39,7 @@ exports.createUser = asyncHandler(async (req, res, next) => {
 exports.updateUser = asyncHandler(async (req, res, next) => {
   req.body.password = ''
   delete req.body.password
-
+  req.body.channelName = (req.body.channelName || "").trim();
   const user = await User.findByIdAndUpdate(req.params.id, req.body, {
     new: true,
     runValidators: true,

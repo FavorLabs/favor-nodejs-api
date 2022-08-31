@@ -50,7 +50,7 @@ exports.createSubscriber = asyncHandler(async (req, res, next) => {
     subscriberId: req.user._id
   })
 
-  if (subscription) {
+  if (subscription && subscription.tx) {
     await subscription.remove()
     return res.status(200).json({ success: true, data: {} })
   } else {
