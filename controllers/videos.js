@@ -28,6 +28,9 @@ exports.getVideo = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`No video with that id of ${req.params.id}`))
   }
     video.registered = !!(video.oracle && video.oracle.length>0) ;
+    video.oracle = video.oracle.map(item=>{
+        return item.match(/^0x(\S{64})/)[1]
+    })
     // video.oracle = undefined;
   res.status(200).json({ success: true, data: video })
 })
