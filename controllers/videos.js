@@ -45,6 +45,9 @@ exports.undone = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.videoUpload = asyncHandler(async (req, res, next) => {
     let video = req.body;
+    if(!video.overlay){
+        return next(new ErrorResponse(`No overlay with video，Please upgrade the program！`))
+    }
     video.userId = req.user._id;
     let videoModel = await Video.create(video)
     res.status(200).json({ success: true, data: videoModel });

@@ -11,6 +11,7 @@ const xss = require('xss-clean')
 const rateLimit = require('express-rate-limit')
 const hpp = require('hpp')
 const cors = require('cors')
+const ejs=require("ejs");
 
 const errorHandler = require('./middleware/error')
 
@@ -30,6 +31,7 @@ const feelingRoutes = require('./routes/feelings')
 const subscriptionRoutes = require('./routes/subscriptions')
 const historiesRoutes = require('./routes/histories')
 const searchRoutes = require('./routes/search')
+const shareRoutes = require('./routes/shares')
 
 const app = express()
 
@@ -71,6 +73,10 @@ app.use(cors())
 // Prevent http param pollution
 app.use(hpp())
 
+app.set('view engine', 'ejs');
+// app.set('views', path.join(__dirname, 'views'));
+
+
 app.use(express.static(path.join(__dirname, 'public')))
 
 // app.use((req, res, next) => {
@@ -91,6 +97,7 @@ app.use(versionOne('feelings'), feelingRoutes)
 app.use(versionOne('subscriptions'), subscriptionRoutes)
 app.use(versionOne('histories'), historiesRoutes)
 app.use(versionOne('search'), searchRoutes)
+app.use('/share', shareRoutes)
 
 app.use(errorHandler)
 
