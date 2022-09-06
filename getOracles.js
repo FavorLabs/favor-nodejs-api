@@ -70,7 +70,7 @@ class processor extends events{
                             "filter": {url : returnValues.hash.match(/^0x(\S{64})/)[1] },
                             "update":
                                 {
-                                    oracle: {$pull:returnValues.addr}
+                                    $pull: {oracle:returnValues.addr}
                                 }
                         }
                 })
