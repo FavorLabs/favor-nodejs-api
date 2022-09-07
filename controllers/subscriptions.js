@@ -51,7 +51,7 @@ exports.createSubscriber = asyncHandler(async (req, res, next) => {
   })
 
   if (subscription && (!subscription.tx)) {
-    await Subscription.remove({
+    await Subscription.deleteMany({
       channelId: channelId,
       subscriberId: req.user._id
     })
