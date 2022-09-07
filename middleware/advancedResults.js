@@ -15,7 +15,8 @@ const advancedResults = (
       delete req.query.userId
     }
   } else if (visibility.status == 'public') {
-    req.query["oracle.0"] = {$exists: true}
+    // req.query["oracle.0"] = {$exists: true}
+    req.query["or"] = [{"oracle.0": {exists: true}},{overlay:{ne:"",exists: true}}]
     req.query.status = {in:['public','member']}
         if(!req.query.userId){
           req.query["user.secret"] = {ne:true}
@@ -28,7 +29,7 @@ const advancedResults = (
   removeFields.forEach((param) => delete reqQuery[param])
 
   let queryStr = JSON.stringify(reqQuery)
-  queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in|ne)\b/g, (match) => `$${match}`)
+  queryStr = queryStr.replace(/\b(gt|gte|lt|lte|in|ne|or|exists)\b/g, (match) => `$${match}`)
 
   query = model.find(JSON.parse(queryStr))
 
