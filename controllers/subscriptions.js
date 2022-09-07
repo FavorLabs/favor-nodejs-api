@@ -56,17 +56,13 @@ exports.createSubscriber = asyncHandler(async (req, res, next) => {
       subscriberId: req.user._id
     })
     return res.status(200).json({ success: true, data: {} })
-  } else {
+  }
+  if(!subscription) {
     // return res.status(200).json({success: true, data: {}})
-        await Subscription.findOneAndUpdate({
-            subscriberId: req.user._id,
-            channelId: channelId
-        },{tx:"",expire:0},{upsert:true})
-        subscription = {
-          subscriberId: req.user._id,
-          channelId: channelId,
-          tx:"",expire:0
-        }
+    subscription = await Subscription.create({
+      subscriberId: req.user._id,
+      channelId: channelId
+    })
   }
   res.status(200).json({success: true, data: subscription})
 })
