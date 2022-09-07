@@ -115,7 +115,7 @@ exports.updateSecret = asyncHandler(async (req, res, next) => {
   //   res.status(200).json({ success: false, data: {} })
   // }
   const fieldsToUpdate = {
-    secret:req.body.secret && false
+    secret: true
   }
   await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
     runValidators: true,
