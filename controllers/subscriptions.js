@@ -61,7 +61,7 @@ exports.createSubscriber = asyncHandler(async (req, res, next) => {
         subscription = await Subscription.findOneAndUpdate({
             subscriberId: req.user._id,
             channelId: channelId
-        },{tx:"",expire:0},{upsert:true})
+        },{tx:"",expire:0},{upsert:true,returnNewDocument:true})
   }
   res.status(200).json({success: true, data: subscription})
 })
