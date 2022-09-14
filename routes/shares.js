@@ -11,7 +11,11 @@ const { protect } = require('../middleware/auth')
 
 router.route('/:id').get(async(req, res, next)=>{
   let v = await Video.findById(req.params.id)
-  res.render('share',v);
+  v.query = new URLSearchParams(req.query).toString()
+  if(v.query){
+    v.query = "?"+v.query;
+  }
+  res.render('share', v);
 })
 
 module.exports = router
