@@ -61,6 +61,10 @@ const UserSchema = new Schema(
       tx:{
         type:String,
         default:""
+      },
+      invitation:{
+          type:String,
+          default:""
       }
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }

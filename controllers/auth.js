@@ -21,7 +21,7 @@ const checkSignature = (nonce, signature) =>{
 // @route   POST /api/v1/auth/register
 // @access  Public
 exports.register = asyncHandler(async (req, res, next) => {
-  let { channelName, email, address,timespan,signature } = req.body
+  let { channelName, invitation,email, address,timespan,signature } = req.body
   address = address.toLowerCase()
   email = email.toLowerCase()
 
@@ -43,7 +43,8 @@ exports.register = asyncHandler(async (req, res, next) => {
   let user = await User.create({
     channelName,
     email,
-    address
+    address,
+    invitation
   })
 
   sendTokenResponse(user, 200, res)
