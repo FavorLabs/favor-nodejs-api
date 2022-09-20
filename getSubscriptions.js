@@ -32,7 +32,7 @@ class processor extends events{
             if(dbNumber<this.number){
                 throw new Error("get dbNumber error");
             }
-            let toBlock = this.number+this.stage-1;
+            let toBlock = this.number+this.stage-before;
             if(dbNumber < toBlock){
                 toBlock = dbNumber;
             }
