@@ -12,6 +12,7 @@ const User = require('./models/User')
 const jsonInterface = require('./config/FavorTube.json')
 
 const address = process.env.CONTRACT
+const before = Number(process.env.BEFORE || 1)
 
 class processor extends events{
     constructor(number) {
@@ -26,8 +27,8 @@ class processor extends events{
     async start(){
         try{
 
-            let db = await this.eth.getBlock(this.eth.defaultBlock);
-            let dbNumber = db.number -1;
+            let db = await this.eth.getBlockNumber();
+            let dbNumber = db - before;
             if(dbNumber<this.number){
                 throw new Error("get dbNumber error");
             }
@@ -132,6 +133,11 @@ let main = async ()=>{
     let last = await Config.findOne({key:"Authorization"})
 
     let number = last && last.value || parseInt(process.env.NUMBER)  ;
+
+    if(!number){
+        console.error("config number error!!!");
+        process.exit(0);
+    }
 
     let pro = new processor(number);
 
