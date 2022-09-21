@@ -2,10 +2,12 @@ const fs = require('fs')
 const mongoose = require('mongoose')
 const colors = require('colors')
 const dotenv = require('dotenv')
+const { customAlphabet } = require('nanoid/async')
 
 // Load env vars
 dotenv.config({ path: './config/.env' })
 
+const S = require('./models/Subscription')
 const User = require('./models/User')
 const Category = require('./models/Category')
 
@@ -47,6 +49,33 @@ const deleteData = async () => {
 	}
 }
 
+const code = async () => {
+	try {
+		const nanoid = customAlphabet('6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz', 10)
+		let users = await User.find({code:{$exists:false}})
+		let bulk = await Promise.all(users.map(async item=>{
+			let code = await nanoid()
+			return { updateOne :
+					{
+						"filter": {_id : item._id},
+						"update":{
+							$set:{
+								code: code
+							}
+						},
+						"upsert": false
+					}
+			}
+		}))
+
+		await User.bulkWrite(bulk);
+		console.log('Code updated...'.red.inverse)
+		process.exit()
+	} catch (err) {
+		console.error(err)
+	}
+}
+
 const initView = async () =>{
 	try {
 		// await User.deleteMany()
@@ -80,8 +109,11 @@ if (process.argv[2] === '-i') {
 	// node seeder -d
 	deleteData()
 } else if (process.argv[2] === '-v') {
-	// node seeder -d
+	// node seeder -v
 	initView()
+}else if (process.argv[2] === '-c') {
+	// node seeder -c
+	code()
 }else {
 	process.exit()
 }

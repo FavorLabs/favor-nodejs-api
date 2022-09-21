@@ -32,6 +32,7 @@
 		"mongoose": "^5.8.7",
 		"mongoose-unique-validator": "^2.0.3",
 		"morgan": "^1.9.1",
+		"nanoid": "^3.3.4",
 		"nodemailer": "^6.4.2",
 		"nodemon": "^2.0.15",
 		"web3-eth": "^1.7.1",

@@ -4,6 +4,8 @@ const path = require('path')
 const asyncHandler = require('../middleware/async')
 const ErrorResponse = require('../utils/errorResponse')
 const sendEmail = require('../utils/sendEmail')
+const { customAlphabet } = require('nanoid/async')
+const nanoid = customAlphabet('6789BCDFGHJKLMNPQRTWbcdfghjkmnpqrtwz', 10)
 
 const User = require('../models/User')
 
@@ -40,11 +42,14 @@ exports.register = asyncHandler(async (req, res, next) => {
     })
   }
 
+  let code = await nanoid();
+
   let user = await User.create({
     channelName,
     email,
     address,
-    invitation
+    invitation,
+    code
   })
 
   sendTokenResponse(user, 200, res)
