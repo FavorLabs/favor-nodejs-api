@@ -1,6 +1,5 @@
 const crypto = require('crypto')
 const mongoose = require('mongoose')
-const bcrypt = require('bcryptjs')
 const jwt = require('jsonwebtoken')
 
 const uniqueValidator = require('mongoose-unique-validator')
@@ -79,6 +78,7 @@ const UserSchema = new Schema(
 )
 
 UserSchema.index({ channelName: 'text' })
+UserSchema.index({ code: 1})
 
 UserSchema.virtual('subscribers', {
   ref: 'Subscription',

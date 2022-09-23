@@ -6,6 +6,7 @@ const {
   login,
   logout,
   getMe,
+    getInfo,
   forgotPassword,
   resetPassword,
   updateDetails,
@@ -20,6 +21,7 @@ router.post('/register', register)
 router.post('/login', login)
 router.post('/logout', logout)
 router.post('/me', protect, getMe)
+router.post('/info', getInfo)
 router.put('/updatedetails', protect, updateDetails)
 router.put('/updatesecret', protect, updateSecret)
 router.put('/avatar', protect, uploadChannelAvatar)

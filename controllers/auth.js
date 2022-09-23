@@ -98,6 +98,15 @@ exports.getMe = asyncHandler(async (req, res, next) => {
   res.status(200).json({ success: true, data: user })
 })
 
+exports.getInfo = asyncHandler(async (req, res, next) => {
+  let address = req.address || "";
+  address = address.toLowerCase();
+  const user = await User.find({address:address});
+  let data = user ? {channelName:user.channelName} : {}
+
+  res.status(200).json({ success: true, data: data })
+})
+
 // @desc    Update user details
 // @route   POST /api/v1/auth/updatedetails
 // @access  Private
