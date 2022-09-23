@@ -101,8 +101,8 @@ exports.getMe = asyncHandler(async (req, res, next) => {
 exports.getInfo = asyncHandler(async (req, res, next) => {
   let address = req.query.address || "";
   address = address.toLowerCase();
-  const user = await User.find({address:address});
-  let data = user ? {channelName:user.channelName} : {}
+  const user = await User.findOne({address:address});
+  let data = user ? {channelName:user.channelName} : null
 
   res.status(200).json({ success: true, data: data })
 })
