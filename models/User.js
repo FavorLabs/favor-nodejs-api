@@ -79,6 +79,7 @@ const UserSchema = new Schema(
 
 UserSchema.index({ channelName: 'text' })
 UserSchema.index({ code: 1})
+UserSchema.index({ invitation: 1})
 
 UserSchema.virtual('subscribers', {
   ref: 'Subscription',
@@ -94,6 +95,20 @@ UserSchema.virtual('videos', {
   foreignField: 'userId',
   justOne: false,
   count: true
+})
+UserSchema.virtual('feelings', {
+    ref: 'Feeling',
+    localField: '_id',
+    foreignField: 'userId',
+    justOne: false,
+    count: true
+})
+UserSchema.virtual('invitations', {
+    ref: 'User',
+    localField: 'code',
+    foreignField: 'invitation',
+    justOne: false,
+    count: true
 })
 
 UserSchema.plugin(uniqueValidator, { message: '{PATH} already exists.' })
