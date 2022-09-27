@@ -55,6 +55,22 @@ router
     ),
     getVideos
   )
+router
+    .route('/featured')
+    .get(
+        advancedResults(
+            VideoList,
+            [
+                { path: 'userId' },
+                { path: 'categoryId' },
+                { path: 'likes' },
+                { path: 'dislikes' }
+            ],
+            { status: 'home' }
+        ),
+        getVideos
+    )
+
 
 router
   .route('/:id')

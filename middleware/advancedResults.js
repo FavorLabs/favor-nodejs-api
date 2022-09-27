@@ -21,6 +21,14 @@ const advancedResults = (
         if(!req.query.userId){
           req.query["user.secret"] = {ne:true}
         }
+  }else if (visibility.status == 'featured') {
+    // req.query["oracle.0"] = {$exists: true}
+    req.query["or"] = [{"oracle.0": {exists: true}},{overlay:{ne:"",exists: true}}]
+    req.query.status = {in:['public','member']}
+    req.query["user.vType"] = {gt:0}
+    if(!req.query.userId){
+      req.query["user.secret"] = {ne:true}
+    }
   }
 
   const reqQuery = { ...req.query }
