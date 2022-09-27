@@ -66,7 +66,7 @@ router
                 { path: 'likes' },
                 { path: 'dislikes' }
             ],
-            { status: 'home' }
+            { status: 'featured' }
         ),
         getVideos
     )
