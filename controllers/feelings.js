@@ -18,7 +18,7 @@ exports.createFeeling = asyncHandler(async (req, res, next) => {
     return next(new ErrorResponse(`No video with video id of ${videoId}`))
   }
 
-  if (video.status !== 'public') {
+  if (!(video.status == 'public' || video.status == 'member')) {
     return next(
       new ErrorResponse(
         `You can't like/dislike this video until it's made pulbic`
