@@ -26,7 +26,7 @@ exports.register = asyncHandler(async (req, res, next) => {
   let { channelName, invitation,email, address,timespan,signature } = req.body
   address = address.toLowerCase()
   email = email.toLowerCase()
-
+  channelName = (channelName || "").trim();
   let message = web3Utils.sha3(address+timespan)
 
   let addr = checkSignature(message, signature);

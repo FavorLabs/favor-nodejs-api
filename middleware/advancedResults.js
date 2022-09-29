@@ -50,7 +50,12 @@ const advancedResults = (
     const sortBy = req.query.sort.split(',').join(' ')
     query = query.sort(sortBy)
   } else {
-    query = query.sort({ createdAt: -1 })
+    if (visibility.status == 'featured'){
+      query = query.sort({"user.vType":-1,createdAt: -1 })
+    }else {
+       query = query.sort({ createdAt: -1 })
+    }
+
     // '-createdAt'
   }
 
