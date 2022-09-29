@@ -112,7 +112,7 @@ exports.getInfo = asyncHandler(async (req, res, next) => {
 // @access  Private
 exports.updateDetails = asyncHandler(async (req, res, next) => {
   const fieldsToUpdate = {
-    channelName: req.body.channelName,
+    channelName: req.body.channelName.trim(),
     email: req.body.email.toLowerCase()
   }
   const user = await User.findByIdAndUpdate(req.user.id, fieldsToUpdate, {
