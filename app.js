@@ -77,7 +77,7 @@ app.set('view engine', 'ejs');
 // app.set('views', path.join(__dirname, 'views'));
 
 
-app.use(express.static(path.join(__dirname, 'public')))
+app.use(express.static(path.join(__dirname, 'public'),{maxAge:3600000}))
 
 // app.use((req, res, next) => {
 //   setTimeout(() => {
