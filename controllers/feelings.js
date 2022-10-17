@@ -41,14 +41,14 @@ exports.createFeeling = asyncHandler(async (req, res, next) => {
     })
     return res.status(200).json({ success: true, data: feeling })
   }
-  // else - check req.body.feeling if equals to feeling.type remove
-  if (type == feeling.type) {
-    await feeling.remove()
-    return res.status(200).json({ success: true, data: {} })
-  }
-  // else - change feeling type
-  feeling.type = type
-  feeling = await feeling.save()
+  // // else - check req.body.feeling if equals to feeling.type remove
+  // if (type == feeling.type) {
+  //   await feeling.remove()
+  //   return res.status(200).json({ success: true, data: {} })
+  // }
+  // // else - change feeling type
+  // feeling.type = type
+  // feeling = await feeling.save()
 
   res.status(200).json({ success: true, data: feeling })
 })

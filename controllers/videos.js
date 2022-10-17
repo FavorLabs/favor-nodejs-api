@@ -2,6 +2,7 @@ const path = require('path')
 const fs = require('fs')
 const asyncHandler = require('../middleware/async')
 const ErrorResponse = require('../utils/errorResponse')
+const moment = require('moment')
 
 const Video = require('../models/Video')
 
@@ -219,4 +220,12 @@ exports.deleteVideo = asyncHandler(async (req, res, next) => {
       )
     // }
   // )
+})
+
+exports.uploadable = asyncHandler(async (req, res, next) => {
+    let c = await Video.find({userId:req.user._id,createdAt:{$gt:moment(new Date()).subtract(1,'day')}}).count()
+    if(c>2){
+        return next(new ErrorResponse(`Only 2 videos are allowed to be uploaded within 24 hours`))
+    }
+    res.status(200).json({ success: true, data:true  })
 })

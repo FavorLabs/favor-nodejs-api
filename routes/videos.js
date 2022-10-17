@@ -6,6 +6,7 @@ const {
   videoUpload,
   updateVideo,
   updateViews,
+    uploadable,
   uploadVideoThumbnail,
   deleteVideo
 } = require('../controllers/videos')
@@ -80,5 +81,7 @@ router
 
 router.route('/:id/thumbnails').put(protect, uploadVideoThumbnail)
 router.route('/:id/views').put(protect, updateViews)
+
+router.route('/uploadable').get(protect,uploadable)
 
 module.exports = router
