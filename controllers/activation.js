@@ -20,5 +20,5 @@ exports.getList = asyncHandler(async (req, res, next) => {
 
 exports.getRank = asyncHandler(async (req, res, next) => {
     let queryRound = req.query.round || aData.length;
-    res.status(200).json({success: true, round: queryRound, data: aData[queryRound]});
+    res.status(200).json({success: true, round: queryRound, data: aData[queryRound-1]});
 })
