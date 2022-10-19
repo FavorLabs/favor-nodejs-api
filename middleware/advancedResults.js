@@ -14,6 +14,10 @@ const advancedResults = (
       req.query.channelId = req.user._id
       delete req.query.userId
     }
+    if (visibility.filter == 'code') {
+      req.query.invatation = req.user.code
+      delete req.query.userId
+    }
   } else if (visibility.status == 'public') {
     // req.query["oracle.0"] = {$exists: true}
     req.query["or"] = [{"oracle.0": {exists: true}},{overlay:{ne:"",exists: true}}]

@@ -22,7 +22,10 @@ router
             [
 
             ],
-            { status: 'private' }
+            {
+                status: 'private',
+                filter: 'code'
+            }
         ),
         getList
     )
