@@ -15,7 +15,7 @@ const advancedResults = (
       delete req.query.userId
     }
     if (visibility.filter == 'code') {
-      req.query.invatation = req.user.code
+      req.query.invitation = req.user.code
       delete req.query.userId
     }
   } else if (visibility.status == 'public') {
