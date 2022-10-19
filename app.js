@@ -32,6 +32,7 @@ const subscriptionRoutes = require('./routes/subscriptions')
 const historiesRoutes = require('./routes/histories')
 const searchRoutes = require('./routes/search')
 const shareRoutes = require('./routes/shares')
+const activationRouters = require('./routes/activation')
 
 const app = express()
 
@@ -97,6 +98,8 @@ app.use(versionOne('feelings'), feelingRoutes)
 app.use(versionOne('subscriptions'), subscriptionRoutes)
 app.use(versionOne('histories'), historiesRoutes)
 app.use(versionOne('search'), searchRoutes)
+app.use(versionOne('activation'), activationRouters)
+
 app.use('/share', shareRoutes)
 
 app.use(errorHandler)
