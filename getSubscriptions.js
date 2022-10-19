@@ -4,36 +4,37 @@ const colors = require('colors')
 const Web3 = require('web3-eth')
 const dotenv = require('dotenv')
 
-dotenv.config({ path: './config/.env' })
+dotenv.config({path: './config/.env'})
 const Config = require('./models/Config')
 const Subscription = require('./models/Subscription')
 const User = require('./models/User')
+const SubContract = require('./models/SubContract')
 
 const jsonInterface = require('./config/FavorTube.json')
 
 const address = process.env.CONTRACT
 const before = Number(process.env.BEFORE || 1)
 
-class processor extends events{
+class processor extends events {
     constructor(number) {
         super();
         this.stage = 50
         this.number = number;
         this.eth = new Web3(process.env.ENDPOINT)
         this.contract = new this.eth.Contract(jsonInterface.abi, address);
-        this.on('start',this.start)
+        this.on('start', this.start)
     }
 
-    async start(){
-        try{
+    async start() {
+        try {
 
             let db = await this.eth.getBlockNumber();
             let dbNumber = db - before;
-            if(dbNumber<this.number){
+            if (dbNumber < this.number) {
                 throw new Error("get dbNumber error");
             }
             let toBlock = this.number + this.stage - 1;
-            if(dbNumber < toBlock){
+            if (dbNumber < toBlock) {
                 toBlock = dbNumber;
             }
 
@@ -46,17 +47,18 @@ class processor extends events{
 
             let subBulk = [];
 
-            await P.map(subEvents,async ({transactionHash,returnValues})=>{
-                let owner =  await  User.findOne({address:returnValues.owner.toLowerCase()});
-                let licensee = await  User.findOne({address:returnValues.licensee.toLowerCase()});
-                if(owner && licensee){
-                    subBulk.push({ updateOne :
+            await P.map(subEvents, async ({transactionHash, returnValues}) => {
+                let owner = await User.findOne({address: returnValues.owner.toLowerCase()});
+                let licensee = await User.findOne({address: returnValues.licensee.toLowerCase()});
+                if (owner && licensee) {
+                    subBulk.push({
+                        updateOne:
                             {
-                                "filter": {subscriberId : licensee.id,channelId:owner.id},
+                                "filter": {subscriberId: licensee.id, channelId: owner.id},
                                 "update":
                                     {
                                         tx: transactionHash,
-                                        expire:returnValues.expire
+                                        expire: returnValues.expire
                                     },
                                 "upsert": true
                             }
@@ -64,20 +66,21 @@ class processor extends events{
                 }
             });
 
-            subBulk.push({ updateMany :
+            subBulk.push({
+                updateMany:
                     {
-                        "filter": {expire:{$lt:toBlock},tx:{$ne:""}},
+                        "filter": {expire: {$lt: toBlock}, tx: {$ne: ""}},
                         "update":
                             {
-                                $set:{
-                                tx: "",
+                                $set: {
+                                    tx: "",
                                 }
                             },
                         "upsert": false
                     }
             })
 
-            if(subBulk.length >0){
+            if (subBulk.length > 0) {
                 await Subscription.bulkWrite(subBulk);
             }
 
@@ -90,15 +93,16 @@ class processor extends events{
 
             let setBulk = [];
 
-                await P.map(setEvents,async ({transactionHash,returnValues})=>{
-                setBulk.push({ updateOne :
+            await P.map(setEvents, async ({transactionHash, returnValues}) => {
+                setBulk.push({
+                    updateOne:
                         {
-                            "filter": {address : returnValues.owner.toLowerCase()},
-                            "update":{
-                                $set:{
+                            "filter": {address: returnValues.owner.toLowerCase()},
+                            "update": {
+                                $set: {
                                     mode: returnValues.mode,
-                                    price:returnValues.price,
-                                    tx:transactionHash
+                                    price: returnValues.price,
+                                    tx: transactionHash
                                 }
                             },
                             "upsert": false
@@ -106,37 +110,69 @@ class processor extends events{
                 })
             });
 
-            if(setBulk.length >0){
+            if (setBulk.length > 0) {
                 await User.bulkWrite(setBulk);
             }
 
-            console.log(`block ${toBlock} ok`.green)
-            await Config.findOneAndUpdate({key:"Authorization"},{value:toBlock+1},{upsert:true})
-            this.number = toBlock+1;
+            let subInfoEvents = await this.contract.getPastEvents('$subInfo', {
+                filter: {}, // Using an array means OR: e.g. 20 or 23
+                fromBlock: this.number,
+                toBlock: toBlock
+            });
+            console.log(`get subInfo ${subInfoEvents.length} trans from ${this.number} to ${toBlock} block ok `.green)
 
-            setTimeout(()=>{
+            let subInfoBulk = [];
+
+            await P.map(subInfoEvents, async ({transactionHash, blockNumber, returnValues}) => {
+                subInfoBulk.push({
+                    updateOne:
+                        {
+                            "filter": {tx: transactionHash},
+                            "update": {
+                                $set: {
+                                    tx: transactionHash,
+                                    height: blockNumber,
+                                    expire: returnValues.expire,
+                                    pay: returnValues.value,
+                                    detail: returnValues.subInfo,
+                                }
+                            },
+                            "upsert": true
+                        }
+                })
+            });
+
+            if (subInfoBulk.length > 0) {
+                await SubContract.bulkWrite(subInfoBulk);
+            }
+
+            console.log(`block ${toBlock} ok`.green)
+
+            await Config.findOneAndUpdate({key: "Authorization"}, {value: toBlock + 1}, {upsert: true})
+            this.number = toBlock + 1;
+
+            setTimeout(() => {
                 this.emit('start')
-            },this.number >= dbNumber?2000:5)
-        }
-        catch (e){
+            }, this.number >= dbNumber ? 2000 : 5)
+        } catch (e) {
             console.error(`some error: ${e}`.red);
-            setTimeout(()=>{
+            setTimeout(() => {
                 this.emit('start')
-            },500)
+            }, 500)
         }
     }
 
 }
 
-let main = async ()=>{
+let main = async () => {
 
     await require('./config/db')()
 
-    let last = await Config.findOne({key:"Authorization"})
+    let last = await Config.findOne({key: "Authorization"})
 
-    let number = last && last.value || parseInt(process.env.NUMBER)  ;
+    let number = last && last.value || parseInt(process.env.NUMBER);
 
-    if(!number){
+    if (!number) {
         console.error("config number error!!!");
         process.exit(0);
     }
