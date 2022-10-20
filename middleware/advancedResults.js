@@ -68,7 +68,7 @@ const advancedResults = (
   const limit = parseInt(req.query.limit, 10) || 12
   const startIndex = (page - 1) * limit
   const endIndex = page * limit
-  const total = await model.countDocuments()
+  const total = await model.countDocuments(JSON.parse(queryStr))
   const totalPage = Math.ceil(total / limit)
 
   if (parseInt(req.query.limit) !== 0) {
@@ -109,7 +109,7 @@ const advancedResults = (
   if (parseInt(req.query.limit) !== 0) {
     res.advancedResults = {
       success: true,
-      count: results.length,
+      count: total,
       totalPage,
       pagination,
       data: results

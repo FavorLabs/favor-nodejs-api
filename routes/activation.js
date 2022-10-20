@@ -9,8 +9,6 @@ const {
     getRank
 } = require('../controllers/activation')
 const advancedResults = require("../middleware/advancedResults");
-const VideoList = require("../models/VideoList");
-const {getVideos} = require("../controllers/videos");
 
 router.get('/info',protect, getInfo)
 
