@@ -33,6 +33,7 @@ const historiesRoutes = require('./routes/histories')
 const searchRoutes = require('./routes/search')
 const shareRoutes = require('./routes/shares')
 const activationRouters = require('./routes/activation')
+const revenueRouters = require('./routes/revenue')
 
 const app = express()
 
@@ -99,6 +100,7 @@ app.use(versionOne('subscriptions'), subscriptionRoutes)
 app.use(versionOne('histories'), historiesRoutes)
 app.use(versionOne('search'), searchRoutes)
 app.use(versionOne('activation'), activationRouters)
+app.use(versionOne('revenue'), revenueRouters)
 
 app.use('/share', shareRoutes)
 

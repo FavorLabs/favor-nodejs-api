@@ -48,7 +48,7 @@ class processor extends events {
             let subBulk = [];
 
             await P.map(subEvents, async ({transactionHash, returnValues}) => {
-                let owner = await User.findOne({address: returnValues.owner.toLowerCase()});
+                let owner = await User.findOne({address: returnValues.channel.toLowerCase()});
                 let licensee = await User.findOne({address: returnValues.licensee.toLowerCase()});
                 if (owner && licensee) {
                     subBulk.push({
@@ -134,7 +134,12 @@ class processor extends events {
                                     height: blockNumber,
                                     expire: returnValues.expire,
                                     pay: returnValues.value,
-                                    detail: returnValues.subInfo,
+                                    sender: returnValues.sender,
+                                    detail: {
+                                        channel: returnValues.subInfo[0],
+                                        user: returnValues.subInfo[1],
+                                        sharer: returnValues.subInfo[2],
+                                    },
                                 }
                             },
                             "upsert": true
