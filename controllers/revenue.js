@@ -18,7 +18,8 @@ exports.getInfo = asyncHandler(async (req, res, next) => {
                             "detail.channel.account": address
                         }
                     }, {
-                        $project: {
+                        $group: {
+                            _id: null,
                             "subscriptionBenefits": {$sum: "$detail.channel.amount"}
                         }
                     }
@@ -29,7 +30,8 @@ exports.getInfo = asyncHandler(async (req, res, next) => {
                             "detail.user.account": address
                         }
                     }, {
-                        $project: {
+                        $group: {
+                            _id: null,
                             "rebate": {$sum: "$detail.user.amount"},
                             "subscriptionExpenses": {$sum: "$pay"}
                         }
@@ -41,7 +43,8 @@ exports.getInfo = asyncHandler(async (req, res, next) => {
                             "detail.sharer.account": address
                         }
                     }, {
-                        $project: {
+                        $group: {
+                            _id: null,
                             "sharerBenefits": {$sum: "$detail.sharer.amount"}
                         }
                     }
