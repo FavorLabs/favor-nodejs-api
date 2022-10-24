@@ -46,8 +46,9 @@ exports.undone = asyncHandler(async (req, res, next) => {
 // @access  Private
 async function isUploadLimit(req) {
     let c = await Video.find({userId: req.user._id, createdAt: {$gt: moment(new Date()).subtract(1, 'day')}}).count()
-    if (c > 1) {
-        return {err: true, message: `Only 2 videos are allowed to be uploaded within 24 hours`}
+    let n = 5;
+    if (c >= n) {
+        return {err: true, message: `Only ${n} videos are allowed to be uploaded within 24 hours`}
     }
     return {err: false}
 }
