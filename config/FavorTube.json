@@ -106,12 +106,12 @@
             },
             {
               "internalType": "uint256",
-              "name": "rate",
+              "name": "amount",
               "type": "uint256"
             },
             {
               "internalType": "uint256",
-              "name": "amount",
+              "name": "rate",
               "type": "uint256"
             }
           ],
