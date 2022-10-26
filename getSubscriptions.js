@@ -97,7 +97,7 @@ class processor extends events {
                 setBulk.push({
                     updateOne:
                         {
-                            "filter": {address: returnValues.owner.toLowerCase()},
+                            "filter": {address: returnValues.channel.toLowerCase()},
                             "update": {
                                 $set: {
                                     mode: returnValues.mode,
