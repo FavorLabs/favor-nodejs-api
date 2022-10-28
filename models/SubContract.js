@@ -33,4 +33,9 @@ const subContractSchema = new Schema(
     },
     {timestamps: true}
 )
+subContractSchema.index({ tx: 1 })
+subContractSchema.index({ "detail.channel.account": 1 })
+subContractSchema.index({ "detail.channel.user": 1 })
+subContractSchema.index({ "detail.channel.sharer": 1 })
+
 module.exports = mongoose.model('SubContract', subContractSchema)

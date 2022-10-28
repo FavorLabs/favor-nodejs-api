@@ -83,6 +83,9 @@ const UserSchema = new Schema(
       },
       invitations:{
         type:Number
+      },
+      valid:{
+          type:Number
       }
   },
   { toJSON: { virtuals: true }, toObject: { virtuals: true }, timestamps: true }
