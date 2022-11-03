@@ -1,5 +1,5 @@
 const mongoose = require('mongoose')
-
+const colors = require('colors')
 const DBconnection = async () => {
   const conn = await mongoose
     .connect(process.env.MONGO_URI, {
@@ -13,6 +13,7 @@ const DBconnection = async () => {
     })
 
   console.log(`MongoDB Connected: ${conn.connection.host}`.cyan.underline.bold)
+    return conn
 }
 
 module.exports = DBconnection
