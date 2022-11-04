@@ -7,23 +7,24 @@ const SubListSchema = new Schema(
     {
         userId: {
             type: mongoose.Schema.ObjectId,
-            ref: 'User',
+            ref: 'UserDetail',
             required: true
         },
         channelId: {
             type: mongoose.Schema.ObjectId,
-            ref: 'User',
+            ref: 'UserDetail',
             required: true
         },
         tx:String,
-        subAddress:{
+        workAddress:{
             type:String
         },
         price:String,
         state:{
             type:String,
-            enum:['Submitted','Processing','Chain','Confirmed']
-        }
+            enum:['Submitted','Processing','Chain','Confirmed','error']
+        },
+        detail:String
     },
     { timestamps: true }
 )

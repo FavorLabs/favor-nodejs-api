@@ -37,6 +37,7 @@
 		"nodemailer": "^6.4.2",
 		"nodemon": "^2.0.15",
 		"web3-eth": "^1.7.1",
+		"web3-eth-contract": "^1.8.0",
 		"web3-utils": "^1.7.0",
 		"xss-clean": "^0.1.1"
 	}
