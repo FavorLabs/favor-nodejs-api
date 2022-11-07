@@ -30,40 +30,64 @@ class Worker extends EventEmitter{
         this.address = this.account.getAddress().toString('hex');
         this.balance = await web3.getBalance(this.address);
         this.nonce = await web3.getTransactionCount(this.address);
+
         this.on('go',this.goWork)
+        this.on('valid',this.validAccount)
+        this.on('msg',this.getMsg)
+        this.on('watch',this.watchTx)
+        this.on('send',this.sendTx)
+        this.on('ending',this.endingTx)
+        this.on('return',this.returnMsg)
 
     }
 
-    async goWork(){
+    async start(){
 
         // this.sl = await SubList.findOne({state:{$ne:"Confirmed"},subAddress:this.address}).populate({ path: 'userId', select: 'address' }).populate({ path: 'channelId', select: 'address' })
-        let msg = await this.queue.getAsync()
-        if(!msg){
-            setTimeout(()=>{
-                // this.goWork()
-                this.emit('go')
-            },5000)
-            return;
-        }
-        let {payload,ack} = msg
-        let sl = await SubList.findByIdAndUpdate(payload.id,{$set:{state:"Processing",workAddress:this.address}}).populate({ path: 'userId', select: 'address' }).populate({ path: 'channelId', select: 'address' })
-        let m = await this.queue.ackAsync(ack);
-        console.log(sl.toObject())
-        let hash = await this.sendTx(sl)
-        await SubList.findByIdAndUpdate(payload.id,{$set:{state:"Chain",tx:hash}}).populate({ path: 'userId', select: 'address' })
-        await this.watchTx(hash);
+        // let msg = await this.queue.getAsync()
+        // if(!msg){
+        //     setTimeout(()=>{
+        //         // this.goWork()
+        //         this.emit('go')
+        //     },5000)
+        //     return;
+        // }
+        // let {payload,ack} = msg
+        // let sl = await SubList.findByIdAndUpdate(payload.id,{$set:{state:"Processing",workAddress:this.address}}).populate({ path: 'userId', select: 'address' }).populate({ path: 'channelId', select: 'address' })
+        // let m = await this.queue.ackAsync(ack);
+        // console.log(sl.toObject())
+        // let hash = await this.sendTx(sl)
+        // await SubList.findByIdAndUpdate(payload.id,{$set:{state:"Chain",tx:hash}}).populate({ path: 'userId', select: 'address' })
+        // await this.watchTx(hash);
+        this.emit('valid')
 
+    }
+
+    async validAccount(){
+        this.emit('valid')
+        this.emit('msg')
+    }
+
+    async returnMsg(){
+        this.emit('valid')
     }
 
     async getMsg(){
-
+        this.emit('msg')
+        this.emit('send')
     }
 
     async sendTx(detail){
-
+        this.emit('send')
+        this.emit('watch')
+        this.emit('error')
     }
     async watchTx(hash){
-
+        this.emit('watch')
+        this.emit('ending')
+    }
+    async endingTx(){
+        this.emit('valid')
     }
 }
 
@@ -79,6 +103,7 @@ const main = async ()=>{
     let sb = await SubList.create({userId:"632d418876b535c077c3d3f9",channelId:"63141e29e9fe03692e9b5816",price:1,state:"Submitted"})
     await queue.addAsync({id:sb.id})
     await wer.init()
+
     wer.goWork()
     console.log(wer,queue)
 
