@@ -103,8 +103,10 @@ class Worker extends EventEmitter{
                 let {payload,ack} = this.queueMsg;
                 if (this.tokenBalance > this.queueMsg.price) {
                     await SubList.findByIdAndUpdate(payload.id,{$set:{state:"Processing",workAddress:this.address}}).populate({ path: 'userId', select: 'address' }).populate({ path: 'channelId', select: 'address' }) // setStatusToProcessing;
-                    await this.queue.ackAsync(ack)
+                    await this.queue.ackAsync(ack);
                     this.emit('send');
+                } else {
+                    this.emit('return');
                 }
             } else {
                 setTimeout(() => {
