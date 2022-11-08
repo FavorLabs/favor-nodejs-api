@@ -15,6 +15,10 @@ const SubListSchema = new Schema(
             ref: 'UserDetail',
             required: true
         },
+        sharerId: {
+            type: mongoose.Schema.ObjectId,
+            ref: 'UserDetail',
+        },
         tx:String,
         workAddress:{
             type:String
