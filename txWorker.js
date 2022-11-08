@@ -45,11 +45,14 @@ class Worker extends EventEmitter {
     async init() {
         this.address = this.account.getAddress().toString('hex');
         this.privateKey = this.account.getPrivateKey().toString('hex');
-        this.balance = await web3.getBalance(this.address);
-        this.tokenBalance = await tokenContract.methods.balanceOf(this.address).call();
-        this.findList = true;
+
+        this.balance = Web3Utils.toBN(await web3.getBalance(this.address));
+        this.tokenBalance = Web3Utils.toBN(await tokenContract.methods.balanceOf(this.address).call());
         this.nonce = await web3.getTransactionCount(this.address);
+
         this.subInfo = null;
+        this.findList = true;
+        this.watchCount = 0;
 
         this.on('go', this.start)
         this.on('valid', this.validAccount)
@@ -58,30 +61,15 @@ class Worker extends EventEmitter {
         this.on('send', this.sendTx)
         this.on('ending', this.endingTx)
         this.on('return', this.returnMsg)
-
-
     }
 
     async start() {
-
-        // this.sl = await SubList.findOne({state:{$ne:"Confirmed"},subAddress:this.address}).populate({ path: 'userId', select: 'address' }).populate({ path: 'channelId', select: 'address' })
-        // let msg = await this.queue.getAsync()
-        // if(!msg){
-        //     setTimeout(()=>{
-        //         // this.start()
-        //         this.emit('go')
-        //     },5000)
-        //     return;
-        // }
-        // let {payload,ack} = msg
-        // let sl = await SubList.findByIdAndUpdate(payload.id,{$set:{state:"Processing",workAddress:this.address}}).populate({ path: 'userId', select: 'address' }).populate({ path: 'channelId', select: 'address' })
-        // let m = await this.queue.ackAsync(ack);
-        // console.log(sl.toObject())
-        // let hash = await this.sendTx(sl)
-        // await SubList.findByIdAndUpdate(payload.id,{$set:{state:"Chain",tx:hash}}).populate({ path: 'userId', select: 'address' })
-        // await this.watchTx(hash);
         this.emit('valid')
+    }
 
+    goWatch() {
+        this.watchCount = 0;
+        this.emit("watch");
     }
 
     async validAccount() {
@@ -97,14 +85,15 @@ class Worker extends EventEmitter {
 
     async returnMsg() {
         // this.emit('valid')
-        await this.queue.addAsync({id:this.subInfo._id});
+        await this.queue.addAsync({id: this.subInfo._id});
         this.emit('valid');
     }
 
     async getMsg() {
-        if(this.findList){
+
+        if (this.findList) {
             this.subInfo = await SubList.findOne({
-                state: {$nin: ["Confirmed","Error"]},
+                state: {$nin: ["Confirmed", "Error"]},
                 subAddress: this.address
             }).populate({path: 'userId', select: 'address'}).populate({path: 'channelId', select: 'address'})
 
@@ -128,14 +117,15 @@ class Worker extends EventEmitter {
                     state: "Processing",
                     workAddress: this.address
                 }
-            }, {new: true}).populate({path: 'userId', select: 'address'}).populate({path: 'channelId', select: 'address'})
-            await this.queue.ackAsync(ack);
+            }, {new: true}).populate({path: 'userId', select: 'address'}).populate({
+                path: 'channelId',
+                select: 'address'
+            })
             if (this.tokenBalance.gt(this.subInfo.price)) {
+                await this.queue.ackAsync(ack);
                 this.emit('send');
-                return;
             }
-
-            this.emit('return');
+            // this.emit('return');
             return;
         }
 
@@ -145,56 +135,55 @@ class Worker extends EventEmitter {
     }
 
     async sendTx() {
-        const _this = this;
         const gasPrice = await web3.getGasPrice();
         const zeroAddress = '0x' + '0'.repeat(40);
         const txData = {
-            from: _this.address,
+            from: this.address,
             to: tokenAddress,
             gasPrice: Web3Utils.toHex(gasPrice > maxGasPrice ? maxGasPrice : gasPrice),
-            nonce: _this.nonce,
+            nonce: this.nonce,
             data: tokenAddress.methods.transfer(
                 favorTubeAddress,
-                _this.subInfo.price,
+                this.subInfo.price,
                 web3.abi.encodeParameters(
                     ['address', 'address', 'address'],
-                    [_this.subInfo.channelId.address, _this.subInfo.userId.address, _this.subInfo.sharerId?.address || zeroAddress])
+                    [this.subInfo.channelId.address, this.subInfo.userId.address, this.subInfo.sharerId?.address || zeroAddress])
             ).encodeABI()
         }
         const tx = new Tx(txData, {common});
-        tx.sign(_this.privateKey);
+        tx.sign(this.privateKey);
         const serializedTx = tx.serialize()
         const raw = '0x' + serializedTx.toString('hex')
         web3.sendSignedTransaction(raw, async (error, hash) => {
             if (error) {
                 this.emit('send')
                 // this.emit('error')
-            } else {
-                await SubList.findByIdAndUpdate( _this.subInfo._id, {$set:{state: 'Chain', tx: hash}})
-                this.emit('watch', hash)
+                return;
             }
+            this.subInfo = await SubList.findByIdAndUpdate(this.subInfo._id, {
+                $set: {
+                    state: 'Chain',
+                    tx: hash
+                }
+            }, {new: true});
+            this.goWatch(hash);
         });
     }
 
-    async watchTx(hash) {
-        let lock = false;
-        let timeout = null;
-        let timer = null;
-        timeout = setTimeout(() => {
-            clearInterval(timer);
+    async watchTx() {
+        const receipt = await web3.getTransactionReceipt(this.subInfo.tx);
+        this.watchCount++;
+        if (receipt) {
+            this.emit('ending', receipt);
+            return;
+        }
+        if (this.watchCount >= 30) {
             this.emit("send")
-        }, 1000 * 60 * 2);
-        timer = setInterval(async () => {
-            if (lock) return;
-            lock = true;
-            const receipt = await web3.getTransactionReceipt(hash);
-            if (receipt) {
-                clearInterval(timer);
-                clearTimeout(timeout);
-                this.emit('ending', receipt);
-            }
-            lock = false;
-        }, 2000);
+            return;
+        }
+        setTimeout(() => {
+            this.emit('watch');
+        }, 1000)
     }
 
     async updateAccount(state) {
@@ -203,12 +192,12 @@ class Worker extends EventEmitter {
 
     async endingTx(receipt) {
         this.nonce++;
-        this.balance -= receipt.gasUsed;
-        this.tokenBalance -= this.subInfo.price;
+        this.balance = this.balance.sub(Web3Utils.toBN(receipt.gasUsed));
         if (receipt.state) {
-            await SubList.updateOne({_id: this.subInfo._id}, {state: 'Confirmed'})
+            await SubList.findByIdAndUpdate(this.subInfo._id, {$set: {state: 'Confirmed'}});
+            this.tokenBalance = this.tokenBalance.sub(Web3Utils.toBN(this.subInfo.price));
         } else {
-            await SubList.updateOne({_id: this.subInfo._id}, {state: 'Error', detail: ""});
+            await SubList.findByIdAndUpdate(this.subInfo._id, {$set: {state: 'Error', detail: ""}});
         }
         await this.updateAccount(receipt.state);
         this.emit('valid');
