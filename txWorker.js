@@ -29,9 +29,14 @@ class Worker extends EventEmitter{
     async init(){
         this.address = this.account.getAddress().toString('hex');
         this.balance = await web3.getBalance(this.address);
+        this.tokenBalance = await tokenContract.methods.balanceOf(this.address).call();
+        this.minBalance = '';
+        this.minTokenBalance = '';
+        this.INTTask = null;
+        this.queueMsg = null;
         this.nonce = await web3.getTransactionCount(this.address);
 
-        this.on('go',this.goWork)
+        this.on('go',this.start)
         this.on('valid',this.validAccount)
         this.on('msg',this.getMsg)
         this.on('watch',this.watchTx)
@@ -47,7 +52,7 @@ class Worker extends EventEmitter{
         // let msg = await this.queue.getAsync()
         // if(!msg){
         //     setTimeout(()=>{
-        //         // this.goWork()
+        //         // this.start()
         //         this.emit('go')
         //     },5000)
         //     return;
@@ -64,17 +69,49 @@ class Worker extends EventEmitter{
     }
 
     async validAccount(){
-        this.emit('valid')
-        this.emit('msg')
+        // this.emit('valid')
+        // this.emit('msg')
+        if (this.balance > this.minBalance && this.tokenBalance > this.minTokenBalance) {
+            this.emit('msg');
+        } else {
+            setTimeout(() => {
+                this.emit('valid');
+            }, 5000);
+        }
     }
 
     async returnMsg(){
-        this.emit('valid')
+        // this.emit('valid')
+        await this.queue.addAsync(this.queueMsg);
+        this.emit('valid');
     }
 
     async getMsg(){
-        this.emit('msg')
-        this.emit('send')
+        // this.emit('msg')
+        // this.emit('send')
+        // this.emit('watch')
+        this.INTTask = await SubList.findOne({state:{$ne:"Confirmed"},subAddress:this.address}).populate({ path: 'userId', select: 'address' }).populate({ path: 'channelId', select: 'address' }) // getInterruptingTask;
+        if (this.INTTask) {
+            if (this.INTTask.status === 'Processing') {
+                this.emit('send');
+            } else if (this.INTTask.status === 'Chain') {
+                this.emit('watch');
+            }
+        } else {
+            this.queueMsg = await this.queue.getAsync();
+            if (this.queueMsg) {
+                let {payload,ack} = this.queueMsg;
+                if (this.tokenBalance > this.queueMsg.price) {
+                    await SubList.findByIdAndUpdate(payload.id,{$set:{state:"Processing",workAddress:this.address}}).populate({ path: 'userId', select: 'address' }).populate({ path: 'channelId', select: 'address' }) // setStatusToProcessing;
+                    await this.queue.ackAsync(ack)
+                    this.emit('send');
+                }
+            } else {
+                setTimeout(() => {
+                    this.emit('msg')
+                }, 5000);
+            }
+        }
     }
 
     async sendTx(detail){
@@ -104,7 +141,7 @@ const main = async ()=>{
     await queue.addAsync({id:sb.id})
     await wer.init()
 
-    wer.goWork()
+    wer.start()
     console.log(wer,queue)
 
 
