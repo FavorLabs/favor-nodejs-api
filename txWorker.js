@@ -68,11 +68,6 @@ class Worker extends EventEmitter {
         this.emit('valid')
     }
 
-    goWatch() {
-        this.watchCount = 0;
-        this.emit("watch");
-    }
-
     async validAccount() {
         this.subInfo = null;
         if (this.balance.gt(minBalance) && this.tokenBalance.gt(minTokenBalance)) {
@@ -97,14 +92,13 @@ class Worker extends EventEmitter {
                 subAddress: this.address
             }).populate({path: 'userId', select: 'address'})
                 .populate({path: 'channelId', select: 'address'})
-                .populate({path: 'sharerId',select: 'address'})
+                .populate({path: 'sharerId', select: 'address'})
 
             if (this.subInfo) {
                 if (this.subInfo.state === 'Processing') {
                     this.emit('send');
                 } else if (this.subInfo.state === 'Chain') {
-                    // this.emit('watch');
-                    this.goWatch();
+                    this.emit('watch');
                 }
                 return;
             }
@@ -113,7 +107,7 @@ class Worker extends EventEmitter {
         this.findList = false;
         const queueMsg = await this.queue.getAsync();
 
-        if(!queueMsg){
+        if (!queueMsg) {
             setTimeout(() => {
                 this.emit('msg')
             }, 5000);
@@ -123,11 +117,11 @@ class Worker extends EventEmitter {
         let {payload, ack} = queueMsg;
         this.subInfo = await SubList.findById(payload.id)
             .populate({path: 'userId', select: 'address'})
-            .populate({path: 'channelId',select: 'address'})
-            .populate({path: 'sharerId',select: 'address'})
+            .populate({path: 'channelId', select: 'address'})
+            .populate({path: 'sharerId', select: 'address'})
 
         if (this.tokenBalance.lt(Web3Utils.toBN(this.subInfo.price))) {
-            this.emit('return')
+            this.emit('valid');
             return;
         }
 
@@ -164,42 +158,40 @@ class Worker extends EventEmitter {
                 // this.emit('error')
                 return;
             }
-
-            this.subInfo = await SubList.findByIdAndUpdate(this.subInfo._id, {
-                $set: {
-                    state: 'Chain',
-                    tx: hash
-                }
-            }, {new: true});
-            this.goWatch(hash);
+            this.subInfo.state = "Chain";
+            this.subInfo.tx = hash;
+            await this.subInfo.update();
+            this.emit('watch');
         });
     }
 
-    async watchTx() {
+    async watchTx(isAdd = false) {
         const receipt = await web3.getTransactionReceipt(this.subInfo.tx);
-        this.watchCount++;
         if (receipt) {
             this.emit('ending', receipt);
             return;
         }
+        this.watchCount = isAdd ? ++this.watchCount : 1;
         if (this.watchCount >= 30) {
-            this.emit("send")
+            this.emit("send");
             return;
         }
         setTimeout(() => {
-            this.emit('watch');
+            this.emit('watch', true);
         }, 2000)
     }
 
-    async updateAccount({userId,type,price}) {
-        let account = null;
-        while (!account){
-            account = await Account.findOneAndUpdate({userId:userId,lock :false},{$set:{lock:true}})
+    async updateAccount({userId, type, price}) {
+        let account = await Account.findOneAndUpdate({userId: userId, lock: false}, {$set: {lock: true}});
+
+        while (!account) {
+            await new Promise(s => setTimeout(s, 1000));
+            account = await Account.findOneAndUpdate({userId: userId, lock: false}, {$set: {lock: true}});
         }
-        if(type == 0){
+        if (type == 0) {
             account.processing = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
         }
-        if(type == 1){
+        if (type == 1) {
             account.amount = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
             account.processing = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
         }
@@ -211,12 +203,14 @@ class Worker extends EventEmitter {
         this.nonce++;
         this.balance = this.balance.sub(Web3Utils.toBN(receipt.gasUsed));
         if (receipt.state) {
-            await SubList.findByIdAndUpdate(this.subInfo._id, {$set: {state: 'Confirmed'}});
+            this.subInfo.state = 'Confirmed';
             this.tokenBalance = this.tokenBalance.sub(Web3Utils.toBN(this.subInfo.price));
         } else {
-            await SubList.findByIdAndUpdate(this.subInfo._id, {$set: {state: 'Error', detail: ""}});
+            this.subInfo.state = 'Error';
+            this.subInfo.detail = "";
         }
-        await this.updateAccount(receipt.state);
+        await this.subInfo.update();
+        await this.updateAccount({userId: this.subInfo.userId, price: this.subInfo.price, type: receipt.state ? 1 : 0});
         this.emit('valid');
     }
 }
