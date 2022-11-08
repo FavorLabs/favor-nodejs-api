@@ -47,7 +47,7 @@ class Worker extends EventEmitter {
         this.tokenBalance = await tokenContract.methods.balanceOf(this.address).call();
         this.minTokenBalance = '';
         this.minBalance = '';
-        this.INTTask = null;
+        this.findList = true;
         this.queueMsg = null;
         this.nonce = await web3.getTransactionCount(this.address);
         this.subInfo = null;
@@ -99,7 +99,7 @@ class Worker extends EventEmitter {
 
     async returnMsg() {
         // this.emit('valid')
-        await this.queue.addAsync(this.queueMsg);
+        await this.queue.addAsync({id:this.subInfo._id});
         this.emit('valid');
     }
 
@@ -107,17 +107,28 @@ class Worker extends EventEmitter {
         // this.emit('msg')
         // this.emit('send')
         // this.emit('watch')
-        this.INTTask = await SubList.findOne({
-            state: {$ne: "Confirmed"},
-            subAddress: this.address
-        }).populate({path: 'userId', select: 'address'}).populate({path: 'channelId', select: 'address'}) // getInterruptingTask;
-        if (this.INTTask) {
-            if (this.INTTask.status === 'Processing') {
-                this.emit('send');
-            } else if (this.INTTask.status === 'Chain') {
-                this.emit('watch');
+
+        if(this.findList){
+            this.subInfo = await SubList.findOne({
+                state: {$nin: ["Confirmed","Error"]},
+                subAddress: this.address
+            }).populate({path: 'userId', select: 'address'}).populate({path: 'channelId', select: 'address'}) // getInterruptingTask;
+
+
+
+            if (this.subInfo) {
+                if (this.subInfo.status === 'Processing') {
+                    this.emit('send');
+                } else if (this.subInfo.status === 'Chain') {
+                    this.emit('watch');
+                }
+                return;
             }
-        } else {
+        }
+
+
+        this.findList = false;
+
             this.queueMsg = await this.queue.getAsync();
             if (this.queueMsg) {
                 let {payload, ack} = this.queueMsg;
@@ -138,7 +149,7 @@ class Worker extends EventEmitter {
                     this.emit('msg')
                 }, 5000);
             }
-        }
+
     }
 
     async sendTx() {
@@ -167,7 +178,7 @@ class Worker extends EventEmitter {
                 this.emit('send')
                 // this.emit('error')
             } else {
-                await SubList.updateOne({_id: _this.subInfo._id}, {state: 'Chain', workAddress: this.address, tx: hash})
+                await SubList.findByIdAndUpdate( _this.subInfo._id, {$set:{state: 'Chain', tx: hash}})
                 this.emit('watch', hash)
             }
         });
