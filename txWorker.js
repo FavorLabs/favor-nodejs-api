@@ -85,7 +85,6 @@ class Worker extends EventEmitter {
     }
 
     async returnMsg() {
-        // this.emit('valid')
         await this.queue.addAsync({id: this.subInfo._id});
         this.emit('valid');
     }
@@ -118,26 +117,25 @@ class Worker extends EventEmitter {
             setTimeout(() => {
                 this.emit('msg')
             }, 5000);
-            return ;
+            return;
         }
 
         let {payload, ack} = queueMsg;
-        this.subInfo = await SubList.findByIdAndUpdate(payload.id, {
-            $set: {
-                state: "Processing",
-                workAddress: this.address
-            }
-        }, {new: true})
+        this.subInfo = await SubList.findById(payload.id)
             .populate({path: 'userId', select: 'address'})
             .populate({path: 'channelId',select: 'address'})
             .populate({path: 'sharerId',select: 'address'})
 
-        if (this.tokenBalance.gt(this.subInfo.price)) {
-            await this.queue.ackAsync(ack);
-            this.emit('send');
+        if (this.tokenBalance.lt(Web3Utils.toBN(this.subInfo.price))) {
+            this.emit('return')
+            return;
         }
 
-
+        await this.queue.ackAsync(ack);
+        this.subInfo.state = "Processing";
+        this.subInfo.workAddress = this.address;
+        await this.subInfo.update();
+        this.emit('send');
     }
 
     async sendTx() {
