@@ -32,6 +32,8 @@ const common = Common.default.forCustomChain('mainnet', {
 const tokenContract = new Contract(TokenJsonInterface.abi, tokenAddress);
 
 const maxGasPrice = Web3Utils.toWei("50", "gwei");
+const minTokenBalance = Web3Utils.toBN('100');
+const minBalance = Web3Utils.toWei('0.1', 'ether');
 
 class Worker extends EventEmitter {
     constructor(account, queue) {
@@ -45,10 +47,7 @@ class Worker extends EventEmitter {
         this.privateKey = this.account.getPrivateKey().toString('hex');
         this.balance = await web3.getBalance(this.address);
         this.tokenBalance = await tokenContract.methods.balanceOf(this.address).call();
-        this.minTokenBalance = '';
-        this.minBalance = '';
         this.findList = true;
-        this.queueMsg = null;
         this.nonce = await web3.getTransactionCount(this.address);
         this.subInfo = null;
 
@@ -86,9 +85,8 @@ class Worker extends EventEmitter {
     }
 
     async validAccount() {
-        // this.emit('valid')
-        // this.emit('msg')
-        if (this.balance > this.minBalance && this.tokenBalance > this.minTokenBalance) {
+        this.subInfo = null;
+        if (this.balance.gt(minBalance) && this.tokenBalance.gt(minTokenBalance)) {
             this.emit('msg');
         } else {
             setTimeout(() => {
@@ -104,52 +102,46 @@ class Worker extends EventEmitter {
     }
 
     async getMsg() {
-        // this.emit('msg')
-        // this.emit('send')
-        // this.emit('watch')
-
         if(this.findList){
             this.subInfo = await SubList.findOne({
                 state: {$nin: ["Confirmed","Error"]},
                 subAddress: this.address
-            }).populate({path: 'userId', select: 'address'}).populate({path: 'channelId', select: 'address'}) // getInterruptingTask;
-
-
+            }).populate({path: 'userId', select: 'address'}).populate({path: 'channelId', select: 'address'})
 
             if (this.subInfo) {
-                if (this.subInfo.status === 'Processing') {
+                if (this.subInfo.state === 'Processing') {
                     this.emit('send');
-                } else if (this.subInfo.status === 'Chain') {
-                    this.emit('watch');
+                } else if (this.subInfo.state === 'Chain') {
+                    // this.emit('watch');
+                    this.goWatch();
                 }
                 return;
             }
         }
 
-
         this.findList = false;
-
-            this.queueMsg = await this.queue.getAsync();
-            if (this.queueMsg) {
-                let {payload, ack} = this.queueMsg;
-                if (this.tokenBalance > this.queueMsg.price) {
-                    await SubList.findByIdAndUpdate(payload.id, {
-                        $set: {
-                            state: "Processing",
-                            workAddress: this.address
-                        }
-                    }).populate({path: 'userId', select: 'address'}).populate({path: 'channelId', select: 'address'}) // setStatusToProcessing;
-                    await this.queue.ackAsync(ack);
-                    this.emit('send');
-                } else {
-                    this.emit('return');
+        const queueMsg = await this.queue.getAsync();
+        if (queueMsg) {
+            let {payload, ack} = queueMsg;
+            this.subInfo = await SubList.findByIdAndUpdate(payload.id, {
+                $set: {
+                    state: "Processing",
+                    workAddress: this.address
                 }
-            } else {
-                setTimeout(() => {
-                    this.emit('msg')
-                }, 5000);
+            }, {new: true}).populate({path: 'userId', select: 'address'}).populate({path: 'channelId', select: 'address'})
+            await this.queue.ackAsync(ack);
+            if (this.tokenBalance.gt(this.subInfo.price)) {
+                this.emit('send');
+                return;
             }
 
+            this.emit('return');
+            return;
+        }
+
+        setTimeout(() => {
+            this.emit('msg')
+        }, 5000);
     }
 
     async sendTx() {
