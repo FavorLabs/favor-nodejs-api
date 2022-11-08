@@ -12,6 +12,7 @@ const Common = require('ethereumjs-common');
 
 const SubList = require('./models/SubList')
 const User = require('./models/UserDetail')
+const Account = require('./models/Account')
 
 dotenv.config({path: './config/.env'});
 
@@ -95,7 +96,9 @@ class Worker extends EventEmitter {
             this.subInfo = await SubList.findOne({
                 state: {$nin: ["Confirmed", "Error"]},
                 subAddress: this.address
-            }).populate({path: 'userId', select: 'address'}).populate({path: 'channelId', select: 'address'})
+            }).populate({path: 'userId', select: 'address'})
+                .populate({path: 'channelId', select: 'address'})
+                .populate({path: 'sharerId',select: 'address'})
 
             if (this.subInfo) {
                 if (this.subInfo.state === 'Processing') {
@@ -110,28 +113,31 @@ class Worker extends EventEmitter {
 
         this.findList = false;
         const queueMsg = await this.queue.getAsync();
-        if (queueMsg) {
-            let {payload, ack} = queueMsg;
-            this.subInfo = await SubList.findByIdAndUpdate(payload.id, {
-                $set: {
-                    state: "Processing",
-                    workAddress: this.address
-                }
-            }, {new: true}).populate({path: 'userId', select: 'address'}).populate({
-                path: 'channelId',
-                select: 'address'
-            })
-            if (this.tokenBalance.gt(this.subInfo.price)) {
-                await this.queue.ackAsync(ack);
-                this.emit('send');
-            }
-            // this.emit('return');
-            return;
+
+        if(!queueMsg){
+            setTimeout(() => {
+                this.emit('msg')
+            }, 5000);
+            return ;
         }
 
-        setTimeout(() => {
-            this.emit('msg')
-        }, 5000);
+        let {payload, ack} = queueMsg;
+        this.subInfo = await SubList.findByIdAndUpdate(payload.id, {
+            $set: {
+                state: "Processing",
+                workAddress: this.address
+            }
+        }, {new: true})
+            .populate({path: 'userId', select: 'address'})
+            .populate({path: 'channelId',select: 'address'})
+            .populate({path: 'sharerId',select: 'address'})
+
+        if (this.tokenBalance.gt(this.subInfo.price)) {
+            await this.queue.ackAsync(ack);
+            this.emit('send');
+        }
+
+
     }
 
     async sendTx() {
@@ -160,6 +166,7 @@ class Worker extends EventEmitter {
                 // this.emit('error')
                 return;
             }
+
             this.subInfo = await SubList.findByIdAndUpdate(this.subInfo._id, {
                 $set: {
                     state: 'Chain',
@@ -183,11 +190,23 @@ class Worker extends EventEmitter {
         }
         setTimeout(() => {
             this.emit('watch');
-        }, 1000)
+        }, 2000)
     }
 
-    async updateAccount(state) {
-
+    async updateAccount({userId,type,price}) {
+        let account = null;
+        while (!account){
+            account = await Account.findOneAndUpdate({userId:userId,lock :false},{$set:{lock:true}})
+        }
+        if(type == 0){
+            account.processing = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
+        }
+        if(type == 1){
+            account.amount = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
+            account.processing = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
+        }
+        account.lock = false
+        await account.update();
     }
 
     async endingTx(receipt) {
@@ -222,6 +241,7 @@ const main = async () => {
     await queue.addAsync({id: sb.id})
     await wer.init()
     wer.start()
+
     console.log(wer, queue)
 
 
