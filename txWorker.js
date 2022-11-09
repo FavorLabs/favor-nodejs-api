@@ -5,13 +5,12 @@ const P = require("bluebird")
 const HDWallet = require('ethereum-hdwallet')
 const Web3 = require('web3-eth')
 const Web3Utils = require('web3-utils');
-const Contract = require('web3-eth-contract');
+
 const EventEmitter = require('node:events');
 const Tx = require("ethereumjs-tx").Transaction
 const Common = require('ethereumjs-common');
 
 const SubList = require('./models/SubList')
-const User = require('./models/UserDetail')
 const Account = require('./models/Account')
 
 dotenv.config({path: './config/.env'});
@@ -30,7 +29,7 @@ const common = Common.default.forCustomChain('mainnet', {
     chainId: 80001
 }, 'petersburg');
 
-const tokenContract = new Contract(TokenJsonInterface.abi, tokenAddress);
+const tokenContract = new web3.Contract(TokenJsonInterface.abi, tokenAddress);
 
 const maxGasPrice = Web3Utils.toWei("50", "gwei");
 const minTokenBalance = Web3Utils.toBN('100');
@@ -44,11 +43,12 @@ class Worker extends EventEmitter {
     }
 
     async init() {
-        this.address = this.account.getAddress().toString('hex');
-        this.privateKey = this.account.getPrivateKey().toString('hex');
+        this.address = "0x" + this.account.getAddress().toString('hex');
+        this.privateKey = "0x" + this.account.getPrivateKey().toString('hex');
 
         this.balance = Web3Utils.toBN(await web3.getBalance(this.address));
         this.tokenBalance = Web3Utils.toBN(await tokenContract.methods.balanceOf(this.address).call());
+
         this.nonce = await web3.getTransactionCount(this.address);
 
         this.subInfo = null;
@@ -85,11 +85,10 @@ class Worker extends EventEmitter {
     }
 
     async getMsg() {
-
         if (this.findList) {
             this.subInfo = await SubList.findOne({
                 state: {$nin: ["Confirmed", "Error"]},
-                subAddress: this.address
+                workAddress: this.address
             }).populate({path: 'userId', select: 'address'})
                 .populate({path: 'channelId', select: 'address'})
                 .populate({path: 'sharerId', select: 'address'})
@@ -140,7 +139,7 @@ class Worker extends EventEmitter {
             to: tokenAddress,
             gasPrice: Web3Utils.toHex(gasPrice > maxGasPrice ? maxGasPrice : gasPrice),
             nonce: this.nonce,
-            data: tokenAddress.methods.transfer(
+            data: tokenContract.methods.transfer(
                 favorTubeAddress,
                 this.subInfo.price,
                 web3.abi.encodeParameters(
@@ -233,24 +232,8 @@ const main = async () => {
     await queue.addAsync({id: sb.id})
     await wer.init()
     wer.start()
-
-    console.log(wer, queue)
-
-
-    //  let msg = await queue.getAsync()
-    // await queue.pingAsync(msg.ack);
-    // msg = await queue.getAsync()
-    //     .then(()=>{
-    //     return queue.get()
-    // }).then((msg)=>{
-    //     return
-    // }).then(()=>{
-    //     return queue.get()
-    // }).then((msg)=>{
-    //     console.log(msg)
-    // })
-
-
 }
 
 main();
+
+module.exports = Worker;
