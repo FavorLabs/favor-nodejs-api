@@ -1,16 +1,14 @@
 const express = require('express')
 
-
-const SubList = require('../models/SubList')
-
 const router = express.Router()
 
-const advancedResults = require('../middleware/advancedResults')
-const { protect } = require('../middleware/auth')
+const {protect} = require('../middleware/auth')
+
+const {getInfo} = require("../controllers/account")
 
 router
-  .route('/')
-  .get(protect, info)
+    .route('/')
+    .get(protect, getInfo)
 
 
 module.exports = router

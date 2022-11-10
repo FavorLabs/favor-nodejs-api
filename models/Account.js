@@ -12,7 +12,7 @@ const AccountSchema = new Schema(
         },
         amount: String,
         processing:String,
-        look:Boolean
+        lock:Boolean
     },
     { timestamps: true }
 )

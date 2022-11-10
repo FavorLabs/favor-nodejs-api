@@ -11,15 +11,16 @@ const xss = require('xss-clean')
 const rateLimit = require('express-rate-limit')
 const hpp = require('hpp')
 const cors = require('cors')
-const ejs=require("ejs");
+const ejs = require("ejs");
 
 const errorHandler = require('./middleware/error')
 
 const DBConnection = require('./config/db')
 
-dotenv.config({ path: './config/.env' })
+dotenv.config({path: './config/.env'})
+const {initQueue} = require("./config/queue")
 
-DBConnection()
+DBConnection().then(conn => initQueue(conn));
 
 const authRoutes = require('./routes/auth')
 const userRoutes = require('./routes/users')
@@ -34,6 +35,8 @@ const searchRoutes = require('./routes/search')
 const shareRoutes = require('./routes/shares')
 const activationRouters = require('./routes/activation')
 const revenueRouters = require('./routes/revenue')
+const accountRouters = require('./routes/account')
+const sublistRouters = require('./routes/sublist')
 
 const app = express()
 
@@ -42,13 +45,13 @@ app.use(express.json())
 app.use(cookieParser())
 
 if (process.env.NODE_ENV === 'development') {
-  app.use(morgan('dev'))
+    app.use(morgan('dev'))
 }
 
 // File uploading
 app.use(
     fileupload({
-      createParentPath: true
+        createParentPath: true
     })
 )
 
@@ -79,7 +82,7 @@ app.set('view engine', 'ejs');
 // app.set('views', path.join(__dirname, 'views'));
 
 
-app.use(express.static(path.join(__dirname, 'public'),{maxAge:3600000}))
+app.use(express.static(path.join(__dirname, 'public'), {maxAge: 3600000}))
 
 // app.use((req, res, next) => {
 //   setTimeout(() => {
@@ -101,6 +104,8 @@ app.use(versionOne('histories'), historiesRoutes)
 app.use(versionOne('search'), searchRoutes)
 app.use(versionOne('activation'), activationRouters)
 app.use(versionOne('revenue'), revenueRouters)
+app.use(versionOne('account'), accountRouters)
+app.use(versionOne('sublist'), sublistRouters)
 
 app.use('/share', shareRoutes)
 
@@ -109,14 +114,14 @@ app.use(errorHandler)
 const PORT = process.env.PORT
 
 const server = app.listen(PORT, () => {
-  console.log(
-      `We are live on ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold
-  )
+    console.log(
+        `We are live on ${process.env.NODE_ENV} mode on port ${PORT}`.yellow.bold
+    )
 })
 
 // Handle unhandled promise rejections
 process.on('unhandledRejection', (err, promise) => {
-  console.log(`Error: ${err.message}`.red)
-  // Close server & exit process
-  server.close(() => process.exit(1))
+    console.log(`Error: ${err.message}`.red)
+    // Close server & exit process
+    server.close(() => process.exit(1))
 })

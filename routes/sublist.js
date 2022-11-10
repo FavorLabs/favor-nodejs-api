@@ -1,21 +1,20 @@
 const express = require('express')
 
-
-const SubList = require('../models/SubList')
-
 const router = express.Router()
 
-const advancedResults = require('../middleware/advancedResults')
-const { protect } = require('../middleware/auth')
+const {protect} = require('../middleware/auth')
+
+const {getList, addList, getSub, getSubById} = require("../controllers/sublist")
 
 router
-  .route('/')
-    .get(protect, updateReply)
-    .post(protect, info)
+    .route('/')
+    .get(protect, getList)
+    .post(protect, addList)
 
-router.route('/:id').get(protect, updateReply)
+router.route('/getsub').get(protect, getSub)
 
-router.route('/getSub').get(protect, updateReply)
+router.route('/:id').get(protect, getSubById)
+
 
 
 

@@ -19,20 +19,24 @@ const SubListSchema = new Schema(
             type: mongoose.Schema.ObjectId,
             ref: 'UserDetail',
         },
-        tx:String,
-        workAddress:{
-            type:String
+        tx: String,
+        workAddress: {
+            type: String
         },
-        price:String,
-        state:{
-            type:String,
-            enum:['Submitted','Processing','Chain','Confirmed','error']
+        price: {
+            type: String,
+            required: true
         },
-        detail:String
+        state: {
+            type: String,
+            enum: ['Submitted', 'Processing', 'Chain', 'Confirmed', 'error'],
+            required: true
+        },
+        detail: String
     },
-    { timestamps: true }
+    {timestamps: true}
 )
 
-SubListSchema.plugin(uniqueValidator, { message: '{PATH} already exists.' })
+SubListSchema.plugin(uniqueValidator, {message: '{PATH} already exists.'})
 
 module.exports = mongoose.model('SubList', SubListSchema)

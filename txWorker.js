@@ -42,7 +42,7 @@ class Worker extends EventEmitter {
         this.queue = queue;
     }
 
-    async init() {
+    async init(debug = false) {
         this.address = "0x" + this.account.getAddress().toString('hex');
         this.privateKey = "0x" + this.account.getPrivateKey().toString('hex');
 
@@ -55,13 +55,15 @@ class Worker extends EventEmitter {
         this.findList = true;
         this.watchCount = 0;
 
-        this.on('go', this.start)
-        this.on('valid', this.validAccount)
-        this.on('msg', this.getMsg)
-        this.on('watch', this.watchTx)
-        this.on('send', this.sendTx)
-        this.on('ending', this.endingTx)
-        this.on('return', this.returnMsg)
+        if (!debug) {
+            this.on('go', this.start)
+            this.on('valid', this.validAccount)
+            this.on('msg', this.getMsg)
+            this.on('watch', this.watchTx)
+            this.on('send', this.sendTx)
+            this.on('ending', this.endingTx)
+            this.on('return', this.returnMsg)
+        }
     }
 
     async start() {
@@ -85,7 +87,9 @@ class Worker extends EventEmitter {
     }
 
     async getMsg() {
+        console.log('enter method: getMsg'.blue)
         if (this.findList) {
+            console.log('findList: ' + this.findList);
             this.subInfo = await SubList.findOne({
                 state: {$nin: ["Confirmed", "Error"]},
                 workAddress: this.address
@@ -93,11 +97,14 @@ class Worker extends EventEmitter {
                 .populate({path: 'channelId', select: 'address'})
                 .populate({path: 'sharerId', select: 'address'})
 
+            console.log('modify value: subInfo'.magenta, this.subInfo);
             if (this.subInfo) {
                 if (this.subInfo.state === 'Processing') {
                     this.emit('send');
+                    console.log('emit: send');
                 } else if (this.subInfo.state === 'Chain') {
                     this.emit('watch');
+                    console.log('emit: watch');
                 }
                 return;
             }
@@ -105,10 +112,12 @@ class Worker extends EventEmitter {
 
         this.findList = false;
         const queueMsg = await this.queue.getAsync();
+        console.log('modify value: queueMsg'.magenta, queueMsg);
 
         if (!queueMsg) {
             setTimeout(() => {
                 this.emit('msg')
+                console.log('emit: msg');
             }, 5000);
             return;
         }
@@ -118,7 +127,9 @@ class Worker extends EventEmitter {
             .populate({path: 'userId', select: 'address'})
             .populate({path: 'channelId', select: 'address'})
             .populate({path: 'sharerId', select: 'address'})
+        console.log('modify value: subInfo'.magenta, this.subInfo);
 
+        console.log('tokenBlance < price', this.tokenBalance.lt(Web3Utils.toBN(this.subInfo.price)));
         if (this.tokenBalance.lt(Web3Utils.toBN(this.subInfo.price))) {
             this.emit('valid');
             return;
@@ -129,6 +140,7 @@ class Worker extends EventEmitter {
         this.subInfo.workAddress = this.address;
         await this.subInfo.update();
         this.emit('send');
+        console.log('emit: send');
     }
 
     async sendTx() {
@@ -199,17 +211,24 @@ class Worker extends EventEmitter {
     }
 
     async endingTx(receipt) {
+        console.log('receipt----', receipt);
         this.nonce++;
         this.balance = this.balance.sub(Web3Utils.toBN(receipt.gasUsed));
-        if (receipt.state) {
+        if (receipt.status) {
+            console.log('receipt Confirmed');
             this.subInfo.state = 'Confirmed';
+            console.log('subInfo: ', this.subInfo);
+            console.log('sub before tokenBalance: ', this.tokenBalance);
             this.tokenBalance = this.tokenBalance.sub(Web3Utils.toBN(this.subInfo.price));
+            console.log('sub after tokenBalance: ', this.tokenBalance);
         } else {
+            console.log('receipt Error');
             this.subInfo.state = 'Error';
             this.subInfo.detail = "";
+            console.log('subInfo: ', this.subInfo);
         }
         await this.subInfo.update();
-        await this.updateAccount({userId: this.subInfo.userId, price: this.subInfo.price, type: receipt.state ? 1 : 0});
+        // await this.updateAccount({userId: this.subInfo.userId, price: this.subInfo.price, type: receipt.status ? 1 : 0});
         this.emit('valid');
     }
 }
@@ -220,7 +239,7 @@ const main = async () => {
     const hdwallet = HDWallet.fromMnemonic(mnemonic)
 
     let conn = await DBConnection();
-    const queue = P.promisifyAll(mongoDbQueue(conn.connection, 'my-queue', {visibility: 0}))
+    const queue = P.promisifyAll(mongoDbQueue(conn.connection, 'sub-queue', {visibility: 0}))
 
     const wer = new Worker(hdwallet.derive(`m/44'/60'/0'/0/0`), queue);
     let sb = await SubList.create({
@@ -234,6 +253,6 @@ const main = async () => {
     wer.start()
 }
 
-main();
+// main();
 
 module.exports = Worker;
