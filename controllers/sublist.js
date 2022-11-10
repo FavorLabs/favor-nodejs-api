@@ -69,7 +69,8 @@ exports.getSubById = asyncHandler(async (req, res, next) => {
 
 exports.getSub = asyncHandler(async (req, res, next) => {
     const {_id} = req.user;
-    const data = await SubList.findOne({userId: _id, state: {$nin: ["Confirmed", "Error"]}})
+    const {channelId} = req.query;
+    const data = await SubList.findOne({userId: _id, channelId, state: {$nin: ["Confirmed", "Error"]}})
         .populate(["userId", "channelId", "sharerId"].map(item => ({path: item, select: ['address', 'channelName']})));
     res.status(200).json({success: true, data})
 })
