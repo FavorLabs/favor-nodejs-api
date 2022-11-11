@@ -56,7 +56,7 @@ class Worker extends EventEmitter {
         }
     }
 
-    async start() {
+    start() {
         this.emit('valid')
     }
 
@@ -229,24 +229,17 @@ class Worker extends EventEmitter {
 
 const main = async () => {
 
-    const mnemonic = 'tag volcano eight thank tide danger coast health above argue embrace heavy'
+    const mnemonic = process.env.MNEMONIC
     const hdwallet = HDWallet.fromMnemonic(mnemonic)
 
     let conn = await DBConnection();
     const queue = P.promisifyAll(mongoDbQueue(conn.connection, 'subQueue', {visibility: 0}))
 
-    const wer = new Worker(hdwallet.derive(`m/44'/60'/0'/0/0`), queue);
-    let sb = await SubList.create({
-        userId: "632d418876b535c077c3d3f9",
-        channelId: "63141e29e9fe03692e9b5816",
-        price: 1,
-        state: "Submitted"
-    })
-    await queue.addAsync({id: sb.id})
-    await wer.init()
-    wer.start()
+    const worker = new Worker(hdwallet.derive(`m/44'/60'/0'/0/0`), queue);
+    await worker.init();
+    worker.start();
 }
 
-// main();
+main();
 
 module.exports = Worker;
