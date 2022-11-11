@@ -10,6 +10,8 @@ const contract = new eth.Contract(jsonInterface.abi, address);
 const tokenContract = new eth.Contract(tokenJsonInterface.abi, tokenAddress);
 
 module.exports = {
+    address,
+    tokenAddress,
     eth,
     contract,
     tokenContract

@@ -3,7 +3,6 @@ const DBConnection = require('./config/db')
 const dotenv = require("dotenv");
 const P = require("bluebird")
 const HDWallet = require('ethereum-hdwallet')
-const Web3 = require('web3-eth')
 const Web3Utils = require('web3-utils');
 
 const EventEmitter = require('node:events');
@@ -15,21 +14,12 @@ const Account = require('./models/Account')
 
 dotenv.config({path: './config/.env'});
 
-const TokenJsonInterface = require("./config/FavorToken.json");
-const favorTubeAddress = process.env.CONTRACT;
-const tokenAddress = process.env.TOKEN_CONTRACT;
-
-const rpcURL = process.env.ENDPOINT;
-
-const web3 = new Web3(rpcURL);
+const {address: favorTubeAddress, tokenAddress, tokenContract, eth: web3} = require("./config/contract")
 
 const common = Common.default.forCustomChain('mainnet', {
-    name: 'polygon_test',
-    networkId: 80001,
-    chainId: 80001
+    networkId: process.env.NETWORK_ID,
+    chainId: process.env.CHAIN_ID
 }, 'petersburg');
-
-const tokenContract = new web3.Contract(TokenJsonInterface.abi, tokenAddress);
 
 const maxGasPrice = Web3Utils.toWei("50", "gwei");
 const minTokenBalance = Web3Utils.toBN('100');
@@ -129,7 +119,7 @@ class Worker extends EventEmitter {
             .populate({path: 'sharerId', select: 'address'})
         console.log('modify value: subInfo'.magenta, this.subInfo);
 
-        console.log('tokenBlance < price', this.tokenBalance.lt(Web3Utils.toBN(this.subInfo.price)));
+        console.log('tokenBalance < price', this.tokenBalance.lt(Web3Utils.toBN(this.subInfo.price)));
         if (this.tokenBalance.lt(Web3Utils.toBN(this.subInfo.price))) {
             this.emit('valid');
             return;
@@ -138,7 +128,7 @@ class Worker extends EventEmitter {
         await this.queue.ackAsync(ack);
         this.subInfo.state = "Processing";
         this.subInfo.workAddress = this.address;
-        await this.subInfo.update();
+        await this.subInfo.save();
         this.emit('send');
         console.log('emit: send');
     }
@@ -171,7 +161,7 @@ class Worker extends EventEmitter {
             }
             this.subInfo.state = "Chain";
             this.subInfo.tx = hash;
-            await this.subInfo.update();
+            await this.subInfo.save();
             this.emit('watch');
         });
     }
@@ -207,7 +197,7 @@ class Worker extends EventEmitter {
             account.processing = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
         }
         account.lock = false
-        await account.update();
+        await account.save();
     }
 
     async endingTx(receipt) {
@@ -227,8 +217,12 @@ class Worker extends EventEmitter {
             this.subInfo.detail = "";
             console.log('subInfo: ', this.subInfo);
         }
-        await this.subInfo.update();
-        // await this.updateAccount({userId: this.subInfo.userId, price: this.subInfo.price, type: receipt.status ? 1 : 0});
+        await this.subInfo.save();
+        await this.updateAccount({
+            userId: this.subInfo.userId,
+            price: this.subInfo.price,
+            type: receipt.status ? 1 : 0
+        });
         this.emit('valid');
     }
 }

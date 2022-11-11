@@ -24,7 +24,6 @@ exports.addList = asyncHandler(async (req, res, next) => {
             sharerId,
             price,
             tx,
-            wordAddress: address,
             state: "Chain"
         });
         res.status(200).json({success: true, data});

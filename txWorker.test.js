@@ -2,238 +2,187 @@ const Worker = require('./txWorker');
 const DBConnection = require('./config/db');
 const HDWallet = require('ethereum-hdwallet');
 const SubList = require('./models/SubList');
-const UserDetail = require('./models/UserDetail');
 const P = require("bluebird");
 const mongoDbQueue = require("mongodb-queue");
-const mongoose = require('mongoose');
-const Web3 = require("web3-eth");
-const rpcURL = process.env.ENDPOINT;
-const web3 = new Web3(rpcURL);
+const mongoose = require("mongoose");
+require('./models/UserDetail');
+
+// const {eth} = require("./config/contract");
+//
+
+jest.setTimeout(10000);
+
+let conn = null;
+let worker = null;
+let queue = null;
 
 
-describe('getMsg', () => {
-    let conn = null;
-    let worker = null;
-    let queue = null;
+beforeAll(async () => {
+    conn = await DBConnection();
+    queue = P.promisifyAll(mongoDbQueue(conn.connection, 'my-queue', {visibility: 30}))
+    const mnemonic = 'way draw mystery enroll climb rhythm because chaos flat today before exclude';
+    const hdwallet = HDWallet.fromMnemonic(mnemonic);
+    worker = new Worker(hdwallet.derive(`m/44'/60'/0'/0/0`), queue);
+    await worker.init(true);
+})
 
-    beforeAll(async () => {
-        conn = await DBConnection();
-        const mnemonic = 'tag volcano eight thank tide danger coast health above argue embrace heavy'
-        const hdwallet = HDWallet.fromMnemonic(mnemonic);
-        queue = P.promisifyAll(mongoDbQueue(conn.connection, 'my-queue', {visibility: 0}))
-        worker = new Worker(hdwallet.derive(`m/44'/60'/0'/0/0`), queue);
-        await worker.init('debug');
-        console.log('getMsg beforeAll: init state');
-    })
+afterAll(async () => {
+    conn.connection.close()
+});
 
-    afterAll(async () => {
+
+describe('msg', () => {
+    let event = [
+        "valid",
+        "msg",
+        "send",
+        "watch",
+    ]
+
+    beforeEach(async () => {
+        await SubList.deleteMany({workAddress: worker.address});
     });
 
-    it('Processing INTTask to send state', async () => {
-        await SubList.deleteMany({});
-        let info = await SubList.create({
-            userId:  mongoose.Types.ObjectId(),
+    afterEach(() => {
+        event.forEach(key => {
+            worker.removeAllListeners(key);
+        });
+    });
+
+    test("Interrupted tasks with the status Processing", async () => {
+        const fn = jest.fn()
+        await SubList.create({
+            userId: mongoose.Types.ObjectId(),
             channelId: mongoose.Types.ObjectId(),
             price: 100,
             state: "Processing",
             workAddress: worker.address
         });
-
-        worker.on("send", async () => {
-            await info.remove()
-            expect(worker.subInfo.state).toBe("Processing");
-        })
-
-        // setTimeout(async ()=>{
-        //     await info.remove()
-        //     expect(worker.subInfo.state).toBe("Processing");
-        // },5000)
-
+        event.forEach(key => {
+            worker.on(key, () => {
+                fn(key);
+            })
+        });
         await worker.getMsg();
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fn).toHaveBeenCalledWith("send");
     })
 
-    it('Chain INTTask to watch state', async () => {
-        await SubList.deleteMany({});
-        let info = await SubList.create({
+    test("Interrupted tasks with the status Chain", async () => {
+        const fn = jest.fn()
+        await SubList.create({
             userId: mongoose.Types.ObjectId(),
             channelId: mongoose.Types.ObjectId(),
             price: 100,
             state: "Chain",
             workAddress: worker.address
         });
-
-        worker.on("watch", async() => {
-            await info.remove()
-            expect(worker.subInfo.state).toBe("Chain");
-        })
-
-        // setTimeout(async ()=>{
-        //     await info.remove()
-        //     expect(worker.subInfo.state).toBe("Chain");
-        // },5000)
-
+        event.forEach(key => {
+            worker.on(key, () => {
+                fn(key);
+            })
+        });
         await worker.getMsg();
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fn).toHaveBeenCalledWith("watch");
     })
 
-    it('INTTask to watch state, have a queue message', async () => {
-        await SubList.deleteMany({});
-        let info = await SubList.create({
+    test("Cannot get queue messages", async () => {
+        const fn = jest.fn()
+        event.forEach(key => {
+            worker.on(key, () => {
+                fn(key);
+            })
+        });
+        await worker.getMsg();
+        await new Promise(s => setTimeout(s, 5000));
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fn).toHaveBeenCalledWith("msg");
+    })
+
+    test("Get a queue message, but the balance is low", async () => {
+        const fn = jest.fn()
+        let data = await SubList.create({
             userId: mongoose.Types.ObjectId(),
             channelId: mongoose.Types.ObjectId(),
-            price: 100,
-            state: "Chain",
+            price: 100001,
+            state: "Submitted",
             workAddress: worker.address
         });
-        // await queue.cleanAsync();
-        await queue.addAsync({id:info.id})
-
-        worker.on("watch", async() => {
-            await info.remove()
-            console.log('watch-------')
-            expect(worker.subInfo.state).toBe("Chain");
-        })
-        worker.on("valid", async() => {
-            await info.remove()
-            console.log('valid-------')
-            // expect(worker.subInfo.state).toBe("Chain");
-        })
-        worker.on("send", async() => {
-            await info.remove()
-            console.log('send-------')
-            // expect(worker.subInfo.state).toBe("Chain");
-        })
-
+        await queue.addAsync({id: data._id});
+        event.forEach(key => {
+            worker.on(key, () => {
+                fn(key);
+            })
+        });
         await worker.getMsg();
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fn).toHaveBeenCalledWith("valid");
     })
 
-    it('Didn\'t get the queue messages', async () => {
-        // await queue.cleanAsync();
-
-        worker.on("msg", async () => {
-            expect('');
-        })
-
-        setTimeout(async ()=>{
-            expect('');
-        },5000)
-
-        await worker.getMsg();
-    })
-
-    it('get the queue messages, but the price is not met', async () => {
-        worker.findList = false;
-        await SubList.deleteMany({});
-        let info = await SubList.create({
+    test("Send a queue message", async () => {
+        const fn = jest.fn();
+        let data = await SubList.create({
             userId: mongoose.Types.ObjectId(),
             channelId: mongoose.Types.ObjectId(),
             price: 100,
             state: "Submitted",
             workAddress: worker.address
         });
-        // await queue.cleanAsync();
-        await queue.addAsync({id:info.id})
-
-        worker.on("valid", async () => {
-            console.log('valid------');
-        })
-        worker.on("send", async () => {
-            console.log('send------')
-        })
-
-        // setTimeout(async ()=>{
-        //     expect('');
-        // },5000)
-
-        await worker.getMsg();
-    })
-
-    it('get the queue messages, but the price is met', async () => {
-        worker.findList = false;
-        await SubList.deleteMany({});
-        let info = await SubList.create({
-            userId: mongoose.Types.ObjectId(),
-            channelId: mongoose.Types.ObjectId(),
-            price: 10000000,
-            state: "Submitted",
-            workAddress: worker.address
+        await queue.addAsync({id: data._id});
+        event.forEach(key => {
+            worker.on(key, () => {
+                fn(key);
+            })
         });
-        // await queue.cleanAsync();
-        await queue.addAsync({id:info.id})
-
-        worker.on("valid", async () => {
-            console.log('valid------');
-        })
-        worker.on("send", async () => {
-            console.log('send------')
-        })
-
-        // setTimeout(async ()=>{
-        //     expect('');
-        // },5000)
-
         await worker.getMsg();
+        expect(fn).toHaveBeenCalledTimes(1);
+        expect(fn).toHaveBeenCalledWith("send");
+        return SubList.findById(data._id).then((res) => {
+            expect(res.state).toBe("Processing");
+        })
     })
-
 })
 
+describe('watch -> ending', () => {
 
-describe('endingTx', () => {
-    let conn = null;
-    let worker = null;
-    let queue = null;
-
-    beforeAll(async () => {
-        conn = await DBConnection();
-        const mnemonic = 'tag volcano eight thank tide danger coast health above argue embrace heavy'
-        const hdwallet = HDWallet.fromMnemonic(mnemonic);
-        queue = P.promisifyAll(mongoDbQueue(conn.connection, 'my-queue', {visibility: 0}))
-        worker = new Worker(hdwallet.derive(`m/44'/60'/0'/0/0`), queue);
-        await worker.init('debug');
-        console.log('endingTx beforeAll: init state');
-    })
-
-    afterAll(async () => {
-
+    beforeEach(async () => {
+        await SubList.deleteMany({workAddress: worker.address});
     });
 
-    it('error receipt', async () => {
-        await SubList.deleteMany({});
-        let info = await SubList.create({
+    afterEach(() => {
+        worker.removeAllListeners("ending");
+    });
+
+
+    test("Receipt success", async () => {
+        worker.subInfo = await SubList.create({
             userId: mongoose.Types.ObjectId(),
             channelId: mongoose.Types.ObjectId(),
             price: 100,
-            state: "Submitted",
+            state: "Chain",
+            tx: "0x9982ba6a566b1e0ced475183dd277d04b53dca9bda5c08b63993a0848b212616",
             workAddress: worker.address
         });
-        worker.subInfo = info;
-        let receipt = await web3.getTransactionReceipt('0x025ec346c4c2ace5ac1fb3b7650aa53a02037dc720c2c9ef8162ad032823a83c');
-
-        worker.on('valid', () => {
-            console.log('valid-----');
-            expect(worker.subInfo.state).toBe('Error');
+        worker.on("ending", (receipt) => {
+            expect(receipt.status).toBeTruthy();
         })
-
-        await worker.endingTx(receipt);
+        await worker.watchTx();
     })
 
-    it('normal receipt', async () => {
-        await SubList.deleteMany({});
-        let info = await SubList.create({
+    test("Receipt error", async () => {
+        worker.subInfo = await SubList.create({
             userId: mongoose.Types.ObjectId(),
             channelId: mongoose.Types.ObjectId(),
             price: 100,
-            state: "Submitted",
+            state: "Chain",
+            tx: "0x025ec346c4c2ace5ac1fb3b7650aa53a02037dc720c2c9ef8162ad032823a83c",
             workAddress: worker.address
         });
-        worker.subInfo = info;
-        let receipt = await web3.getTransactionReceipt('0x160bde4973a34e99de4a5d2b820ef181a4f452d66d20546876c69bfe6186d2bd');
-
-        worker.on('valid', () => {
-            console.log('valid-----');
-            expect(worker.subInfo.state).toBe('Confirmed');
+        worker.on("ending", (receipt) => {
+            expect(receipt.status).toBeFalsy();
         })
-
-        await worker.endingTx(receipt);
+        await worker.watchTx();
     })
 })
 

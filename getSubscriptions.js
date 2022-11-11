@@ -9,6 +9,7 @@ const Config = require('./models/Config')
 const Subscription = require('./models/Subscription')
 const User = require('./models/User')
 const SubContract = require('./models/SubContract')
+const SubList = require('./models/SubList')
 
 const jsonInterface = require('./config/FavorTube.json')
 
@@ -36,52 +37,6 @@ class processor extends events {
             let toBlock = this.number + this.stage - 1;
             if (dbNumber < toBlock) {
                 toBlock = dbNumber;
-            }
-
-            let subEvents = await this.contract.getPastEvents('$subscribe', {
-                filter: {}, // Using an array means OR: e.g. 20 or 23
-                fromBlock: this.number,
-                toBlock: toBlock
-            });
-            console.log(`get sub ${subEvents.length} trans from ${this.number} to ${toBlock} block ok `.green)
-
-            let subBulk = [];
-
-            await P.map(subEvents, async ({transactionHash, returnValues}) => {
-                let owner = await User.findOne({address: returnValues.channel.toLowerCase()});
-                let licensee = await User.findOne({address: returnValues.licensee.toLowerCase()});
-                if (owner && licensee) {
-                    subBulk.push({
-                        updateOne:
-                            {
-                                "filter": {subscriberId: licensee.id, channelId: owner.id},
-                                "update":
-                                    {
-                                        tx: transactionHash,
-                                        expire: returnValues.expire
-                                    },
-                                "upsert": true
-                            }
-                    })
-                }
-            });
-
-            subBulk.push({
-                updateMany:
-                    {
-                        "filter": {expire: {$lt: toBlock}, tx: {$ne: ""}},
-                        "update":
-                            {
-                                $set: {
-                                    tx: "",
-                                }
-                            },
-                        "upsert": false
-                    }
-            })
-
-            if (subBulk.length > 0) {
-                await Subscription.bulkWrite(subBulk);
             }
 
             let setEvents = await this.contract.getPastEvents('$setUserConfig', {
@@ -122,8 +77,24 @@ class processor extends events {
             console.log(`get subInfo ${subInfoEvents.length} trans from ${this.number} to ${toBlock} block ok `.green)
 
             let subInfoBulk = [];
+            let subBulk = [];
+            let subListBulk = [];
 
             await P.map(subInfoEvents, async ({transactionHash, blockNumber, returnValues}) => {
+                let channel = await User.findOne({address: returnValues.subInfo[0].account});
+                let user = await User.findOne({address: returnValues.subInfo[1].account});
+                subBulk.push({
+                    updateOne:
+                        {
+                            "filter": {subscriberId: channel.id, channelId: user.id},
+                            "update":
+                                {
+                                    tx: transactionHash,
+                                    expire: returnValues.expire
+                                },
+                            "upsert": true
+                        }
+                });
                 subInfoBulk.push({
                     updateOne:
                         {
@@ -144,8 +115,44 @@ class processor extends events {
                             },
                             "upsert": true
                         }
-                })
+                });
+                subListBulk.push({
+                    updateOne:
+                        {
+                            "filter": {tx: transactionHash, workAddress: {"$exists": false}},
+                            "update": {
+                                $set: {
+                                    height: blockNumber,
+                                    expire: returnValues.expire,
+                                    state: "Confirmed",
+                                    workAddress: returnValues.sender
+                                }
+                            }
+                        }
+                });
+            })
+
+            subBulk.push({
+                updateMany:
+                    {
+                        "filter": {expire: {$lt: toBlock}, tx: {$ne: ""}},
+                        "update":
+                            {
+                                $set: {
+                                    tx: "",
+                                }
+                            },
+                        "upsert": false
+                    }
             });
+
+            if (subBulk.length > 0) {
+                await Subscription.bulkWrite(subBulk);
+            }
+
+            if (subListBulk.length > 0) {
+                await SubList.bulkWrite(subListBulk);
+            }
 
             if (subInfoBulk.length > 0) {
                 await SubContract.bulkWrite(subInfoBulk);

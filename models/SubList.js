@@ -20,9 +20,7 @@ const SubListSchema = new Schema(
             ref: 'UserDetail',
         },
         tx: String,
-        workAddress: {
-            type: String
-        },
+        workAddress: String,
         price: {
             type: String,
             required: true
@@ -32,6 +30,8 @@ const SubListSchema = new Schema(
             enum: ['Submitted', 'Processing', 'Chain', 'Confirmed', 'error'],
             required: true
         },
+        height: Number,
+        expire: Number,
         detail: String
     },
     {timestamps: true}
