@@ -10,7 +10,7 @@ require('./models/UserDetail');
 // const {eth} = require("./config/contract");
 //
 
-jest.setTimeout(10000);
+jest.setTimeout(30000);
 
 let conn = null;
 let worker = null;

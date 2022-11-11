@@ -27,7 +27,7 @@ const SubListSchema = new Schema(
         },
         state: {
             type: String,
-            enum: ['Submitted', 'Processing', 'Chain', 'Confirmed', 'error'],
+            enum: ['Submitted', 'Processing', 'Chain', 'Confirmed', 'Error'],
             required: true
         },
         height: Number,
