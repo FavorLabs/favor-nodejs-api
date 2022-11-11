@@ -233,7 +233,7 @@ const main = async () => {
     const hdwallet = HDWallet.fromMnemonic(mnemonic)
 
     let conn = await DBConnection();
-    const queue = P.promisifyAll(mongoDbQueue(conn.connection, 'sub-queue', {visibility: 0}))
+    const queue = P.promisifyAll(mongoDbQueue(conn.connection, 'subQueue', {visibility: 0}))
 
     const wer = new Worker(hdwallet.derive(`m/44'/60'/0'/0/0`), queue);
     let sb = await SubList.create({

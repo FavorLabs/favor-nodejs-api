@@ -19,7 +19,7 @@ let queue = null;
 
 beforeAll(async () => {
     conn = await DBConnection();
-    queue = P.promisifyAll(mongoDbQueue(conn.connection, 'my-queue', {visibility: 30}))
+    queue = P.promisifyAll(mongoDbQueue(conn.connection, 'myQueue', {visibility: 30}))
     const mnemonic = 'way draw mystery enroll climb rhythm because chaos flat today before exclude';
     const hdwallet = HDWallet.fromMnemonic(mnemonic);
     worker = new Worker(hdwallet.derive(`m/44'/60'/0'/0/0`), queue);
