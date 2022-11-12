@@ -4,6 +4,7 @@ const dotenv = require("dotenv");
 const P = require("bluebird")
 const HDWallet = require('ethereum-hdwallet')
 const Web3Utils = require('web3-utils');
+require('./models/UserDetail');
 
 const EventEmitter = require('node:events');
 const Tx = require("ethereumjs-tx").Transaction
@@ -17,8 +18,9 @@ dotenv.config({path: './config/.env'});
 const {address: favorTubeAddress, tokenAddress, tokenContract, eth: web3} = require("./config/contract")
 
 const common = Common.default.forCustomChain('mainnet', {
-    networkId: process.env.NETWORK_ID,
-    chainId: process.env.CHAIN_ID
+    name: "test",
+    networkId: Number(process.env.NETWORK_ID),
+    chainId: Number(process.env.CHAIN_ID)
 }, 'petersburg');
 
 const maxGasPrice = Web3Utils.toWei("50", "gwei");
@@ -34,7 +36,7 @@ class Worker extends EventEmitter {
 
     async init(debug = false) {
         this.address = "0x" + this.account.getAddress().toString('hex');
-        this.privateKey = "0x" + this.account.getPrivateKey().toString('hex');
+        this.privateKey = this.account.getPrivateKey()
 
         this.balance = Web3Utils.toBN(await web3.getBalance(this.address));
         this.tokenBalance = Web3Utils.toBN(await tokenContract.methods.balanceOf(this.address).call());
@@ -57,10 +59,12 @@ class Worker extends EventEmitter {
     }
 
     start() {
+        console.log("start");
         this.emit('valid')
     }
 
     async validAccount() {
+        console.log("valid")
         this.subInfo = null;
         if (this.balance.gt(minBalance) && this.tokenBalance.gt(minTokenBalance)) {
             this.emit('msg');
@@ -77,9 +81,8 @@ class Worker extends EventEmitter {
     }
 
     async getMsg() {
-        console.log('enter method: getMsg'.blue)
+        console.log('msg')
         if (this.findList) {
-            console.log('findList: ' + this.findList);
             this.subInfo = await SubList.findOne({
                 state: {$nin: ["Confirmed", "Error"]},
                 workAddress: this.address
@@ -87,7 +90,7 @@ class Worker extends EventEmitter {
                 .populate({path: 'channelId', select: 'address'})
                 .populate({path: 'sharerId', select: 'address'})
 
-            console.log('modify value: subInfo'.magenta, this.subInfo);
+            console.log('INTTask', this.subInfo);
             if (this.subInfo) {
                 if (this.subInfo.state === 'Processing') {
                     this.emit('send');
@@ -102,12 +105,11 @@ class Worker extends EventEmitter {
 
         this.findList = false;
         const queueMsg = await this.queue.getAsync();
-        console.log('modify value: queueMsg'.magenta, queueMsg);
+        console.log("queueMsg", queueMsg);
 
         if (!queueMsg) {
             setTimeout(() => {
                 this.emit('msg')
-                console.log('emit: msg');
             }, 5000);
             return;
         }
@@ -117,9 +119,9 @@ class Worker extends EventEmitter {
             .populate({path: 'userId', select: 'address'})
             .populate({path: 'channelId', select: 'address'})
             .populate({path: 'sharerId', select: 'address'})
-        console.log('modify value: subInfo'.magenta, this.subInfo);
+        console.log('subInfo', this.subInfo);
 
-        console.log('tokenBalance < price', this.tokenBalance.lt(Web3Utils.toBN(this.subInfo.price)));
+        console.log('tokenBalance', this.tokenBalance, "price", Web3Utils.toBN(this.subInfo.price));
         if (this.tokenBalance.lt(Web3Utils.toBN(this.subInfo.price))) {
             this.emit('valid');
             return;
@@ -134,12 +136,14 @@ class Worker extends EventEmitter {
     }
 
     async sendTx() {
+        console.log("send");
         const gasPrice = await web3.getGasPrice();
         const zeroAddress = '0x' + '0'.repeat(40);
         const txData = {
             from: this.address,
             to: tokenAddress,
             gasPrice: Web3Utils.toHex(gasPrice > maxGasPrice ? maxGasPrice : gasPrice),
+            gasLimit: Web3Utils.toHex(1000000),
             nonce: this.nonce,
             data: tokenContract.methods.transfer(
                 favorTubeAddress,
@@ -159,6 +163,7 @@ class Worker extends EventEmitter {
                 // this.emit('error')
                 return;
             }
+            console.log("tx", hash);
             this.subInfo.state = "Chain";
             this.subInfo.tx = hash;
             await this.subInfo.save();
@@ -201,9 +206,9 @@ class Worker extends EventEmitter {
     }
 
     async endingTx(receipt) {
-        console.log('receipt----', receipt);
+        console.log('receipt', receipt);
         this.nonce++;
-        this.balance = this.balance.sub(Web3Utils.toBN(receipt.gasUsed));
+        this.balance = this.balance.sub(Web3Utils.toBN(receipt.gasUsed * receipt.effectiveGasPrice));
         if (receipt.status) {
             console.log('receipt Confirmed');
             this.subInfo.state = 'Confirmed';
