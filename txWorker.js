@@ -11,11 +11,11 @@ const Tx = require("ethereumjs-tx").Transaction
 const Common = require('ethereumjs-common');
 
 const SubList = require('./models/SubList')
-const Account = require('./models/Account')
 
 dotenv.config({path: './config/.env'});
 
 const {address: favorTubeAddress, tokenAddress, tokenContract, eth: web3} = require("./config/contract")
+const {updateAccount} = require("./utils/accountUtil");
 
 const common = Common.default.forCustomChain('mainnet', {
     name: "test",
@@ -187,24 +187,6 @@ class Worker extends EventEmitter {
         }, 2000)
     }
 
-    async updateAccount({userId, type, price}) {
-        let account = await Account.findOneAndUpdate({userId: userId, lock: false}, {$set: {lock: true}});
-
-        while (!account) {
-            await new Promise(s => setTimeout(s, 1000));
-            account = await Account.findOneAndUpdate({userId: userId, lock: false}, {$set: {lock: true}});
-        }
-        if (type == 0) {
-            account.processing = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
-        }
-        if (type == 1) {
-            account.amount = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
-            account.processing = Web3Utils.toBN(account.processing).sub(Web3Utils.toBN(price)).toString()
-        }
-        account.lock = false
-        await account.save();
-    }
-
     async endingTx(receipt) {
         console.log('receipt', receipt);
         this.nonce++;
@@ -223,7 +205,7 @@ class Worker extends EventEmitter {
             console.log('subInfo: ', this.subInfo);
         }
         await this.subInfo.save();
-        await this.updateAccount({
+        await updateAccount({
             userId: this.subInfo.userId,
             price: this.subInfo.price,
             type: receipt.status ? 1 : 0

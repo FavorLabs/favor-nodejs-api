@@ -2,10 +2,10 @@ const Web3Utils = require("web3-utils");
 const asyncHandler = require('../middleware/async')
 const ErrorResponse = require('../utils/errorResponse')
 const SubList = require('../models/SubList');
-const Account = require('../models/Account');
 
-const {contract} = require("../config/contract");
+const {contract, eth} = require("../config/contract");
 const {getQueue} = require("../config/queue");
+const {updateAccount} = require("../utils/accountUtil");
 
 exports.getList = asyncHandler(async (req, res, next) => {
     const {_id} = req.user;
@@ -16,7 +16,7 @@ exports.getList = asyncHandler(async (req, res, next) => {
 
 exports.addList = asyncHandler(async (req, res, next) => {
     const {_id, address} = req.user;
-    const {channelId, sharerId, channelAddress, tx, price} = req.body;
+    const {channelId, sharerId, channelAddress, tx, price, signature} = req.body;
     if (tx) {
         const data = await SubList.create({
             userId: _id,
@@ -29,34 +29,25 @@ exports.addList = asyncHandler(async (req, res, next) => {
         res.status(200).json({success: true, data});
         return;
     }
+
     if (!Web3Utils.isAddress(channelAddress)) return next(new ErrorResponse("ChannelAddress Error"));
-    const userConfig = await contract.methods.userConfig().call({from: channelAddress});
-    let account = await Account.findOneAndUpdate({userId: _id, lock: false}, {$set: {lock: true}});
-    let n = 1;
-    while (!account) {
-        await new Promise(s => setTimeout(s, 100));
-        account = await Account.findOneAndUpdate({userId: _id, lock: false}, {$set: {lock: true}});
-        n++;
-        if (n >= 30) {
-            return next(new ErrorResponse("Subscription is too busy, please wait"));
-        }
-    }
-    if (BigInt(account.amount) - BigInt(account.processing) < BigInt(userConfig.price)) {
-        await Account.updateOne({userId: _id}, {$set: {lock: false}});
-        return next(new ErrorResponse("Insufficient balance"));
-    }
+    const {price: channelPrice} = await contract.methods.userConfig().call({from: channelAddress});
+
+    let message = `Subscribe to Channel : ${address} (Price: ${channelPrice})`;
+    let addr = eth.accounts.recover(message, signature).toLowerCase();
+    if (addr !== address) return next(new ErrorResponse('Invalid credentials', 400));
+
+    await updateAccount({userId: _id, type: 2, timeout: true, price: channelPrice});
+
     const data = await SubList.create({
         userId: _id,
         channelId,
         sharerId,
-        price: userConfig.price,
+        price: channelPrice,
         state: "Submitted"
     });
     const queue = getQueue();
     await queue.addAsync({id: data._id});
-    await Account.updateOne({userId: _id}, {
-        $set: {lock: false, processing: (BigInt(account.processing) + BigInt(userConfig.price)).toString()}
-    });
     res.status(200).json({success: true, data});
 })
 
