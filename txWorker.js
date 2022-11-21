@@ -4,7 +4,8 @@ const dotenv = require("dotenv");
 const P = require("bluebird")
 const HDWallet = require('ethereum-hdwallet')
 const Web3Utils = require('web3-utils');
-require('./models/UserDetail');
+require('./models/User');
+require('./models/Subscription');
 
 const EventEmitter = require('node:events');
 const Tx = require("ethereumjs-tx").Transaction
@@ -18,7 +19,6 @@ const {address: favorTubeAddress, tokenAddress, tokenContract, eth: web3} = requ
 const {updateAccount} = require("./utils/accountUtil");
 
 const common = Common.default.forCustomChain('mainnet', {
-    name: "test",
     networkId: Number(process.env.NETWORK_ID),
     chainId: Number(process.env.CHAIN_ID)
 }, 'petersburg');

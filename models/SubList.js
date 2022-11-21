@@ -7,17 +7,17 @@ const SubListSchema = new Schema(
     {
         userId: {
             type: mongoose.Schema.ObjectId,
-            ref: 'UserDetail',
+            ref: 'User',
             required: true
         },
         channelId: {
             type: mongoose.Schema.ObjectId,
-            ref: 'UserDetail',
+            ref: 'User',
             required: true
         },
         sharerId: {
             type: mongoose.Schema.ObjectId,
-            ref: 'UserDetail',
+            ref: 'User',
         },
         tx: String,
         workAddress: String,
