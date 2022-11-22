@@ -1,7 +1,6 @@
 const events = require("events");
 const P = require('bluebird')
 const colors = require('colors')
-const Web3 = require('web3-eth')
 const dotenv = require('dotenv')
 
 dotenv.config({path: './config/.env'})
@@ -11,9 +10,8 @@ const User = require('./models/User')
 const SubContract = require('./models/SubContract')
 const SubList = require('./models/SubList')
 
-const jsonInterface = require('./config/FavorTube.json')
+const {eth, contract} = require("./config/contract")
 
-const address = process.env.CONTRACT
 const before = Number(process.env.BEFORE || 1)
 
 class processor extends events {
@@ -21,8 +19,8 @@ class processor extends events {
         super();
         this.stage = 50
         this.number = number;
-        this.eth = new Web3(process.env.ENDPOINT)
-        this.contract = new this.eth.Contract(jsonInterface.abi, address);
+        this.eth = eth;
+        this.contract = contract;
         this.on('start', this.start)
     }
 
@@ -81,8 +79,11 @@ class processor extends events {
             let subListBulk = [];
 
             await P.map(subInfoEvents, async ({transactionHash, blockNumber, returnValues}) => {
-                let channel = await User.findOne({address: returnValues.subInfo[0].account});
-                let user = await User.findOne({address: returnValues.subInfo[1].account});
+                let channel = await User.findOne({address: returnValues.subInfo[0].account.toLowerCase()});
+                let user = await User.findOne({address: returnValues.subInfo[1].account.toLowerCase()});
+                if (!channel || !user) {
+                    return;
+                }
                 subBulk.push({
                     updateOne:
                         {
