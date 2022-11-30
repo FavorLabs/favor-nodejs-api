@@ -87,7 +87,7 @@ class processor extends events {
                 subBulk.push({
                     updateOne:
                         {
-                            "filter": {subscriberId: channel.id, channelId: user.id},
+                            "filter": {subscriberId: user.id, channelId: channel.id},
                             "update":
                                 {
                                     tx: transactionHash,
