@@ -6,9 +6,11 @@ const moment = require("moment");
 
 exports.getInfo = asyncHandler(async (req, res, next) => {
     const {address} = req.user;
+    const {date} = req.query;
+    const time = date ? new Date(Number(date)) : moment().subtract(1, "month").toDate()
     let data = (await SubContract.aggregate([
         {
-            $match: {createdAt: {$gt: new Date(moment().subtract(1, "month").format("x"))}}
+            $match: {createdAt: {$gt: time}}
         },
         {
             $facet: {
