@@ -9,9 +9,18 @@ const {updateAccount} = require("../utils/accountUtil");
 
 exports.getList = asyncHandler(async (req, res, next) => {
     const {_id} = req.user;
-    const data = await SubList.find({userId: _id})
+    const {page = 1, limit = 10} = req.query;
+    const total = await SubList.find({userId: _id}).count();
+    const list = await SubList.find({userId: _id}).limit((page - 1) * limit)
         .populate(["userId", "channelId", "sharerId"].map(item => ({path: item, select: ['address', 'channelName']})));
-    res.status(200).json({success: true, data})
+    res.status(200).json({
+        success: true, data: {
+            page,
+            limit,
+            total,
+            list
+        }
+    })
 })
 
 exports.addList = asyncHandler(async (req, res, next) => {
