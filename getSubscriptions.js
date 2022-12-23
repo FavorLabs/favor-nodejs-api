@@ -120,7 +120,7 @@ class processor extends events {
                 subListBulk.push({
                     updateOne:
                         {
-                            "filter": {tx: transactionHash, workAddress: {"$exists": false}},
+                            "filter": {tx: transactionHash},
                             "update": {
                                 $set: {
                                     height: blockNumber,

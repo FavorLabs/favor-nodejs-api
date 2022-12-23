@@ -4,7 +4,7 @@ const ErrorResponse = require('../utils/errorResponse')
 const SubList = require('../models/SubList');
 
 const {contract, eth} = require("../config/contract");
-const {getQueue} = require("../config/queue");
+const {getQueue, getExQueue} = require("../config/queue");
 const {updateAccount} = require("../utils/accountUtil");
 
 exports.getList = asyncHandler(async (req, res, next) => {
@@ -27,14 +27,33 @@ exports.addList = asyncHandler(async (req, res, next) => {
     const {_id, address} = req.user;
     const {channelId, sharerId, channelAddress, tx, price, signature} = req.body;
     if (tx) {
-        const data = await SubList.create({
+        let data = await SubList.findOneAndUpdate({
             userId: _id,
+            state: 'Chain',
+            external: {$ne: -1},
+        },{
             channelId,
             sharerId,
             price,
             tx,
-            state: "Chain"
+        },{
+            new: true
         });
+
+        if (!data) {
+            data = await SubList.create({
+                userId: _id,
+                channelId,
+                sharerId,
+                price,
+                tx,
+                state: "Chain",
+                external: 0
+            });
+            const exQueue = getExQueue();
+            await exQueue.addAsync({id: data._id});
+        }
+
         res.status(200).json({success: true, data});
         return;
     }

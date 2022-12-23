@@ -32,7 +32,11 @@ const SubListSchema = new Schema(
         },
         height: Number,
         expire: Number,
-        detail: String
+        detail: String,
+        external: {
+            type: Number,
+            default: -1,
+        }
     },
     {timestamps: true}
 )
