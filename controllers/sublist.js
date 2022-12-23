@@ -59,7 +59,7 @@ exports.addList = asyncHandler(async (req, res, next) => {
     }
 
     if (!Web3Utils.isAddress(channelAddress)) return next(new ErrorResponse("ChannelAddress Error"));
-    const {price: channelPrice} = await contract.methods.userConfig().call({from: channelAddress});
+    const {price: channelPrice} = await contract.methods.getUserConfig(channelAddress).call();
 
     let message = `Subscribe to Channel : ${address} (Price: ${channelPrice})`;
     let addr = eth.accounts.recover(message, signature).toLowerCase();
