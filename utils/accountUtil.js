@@ -4,10 +4,10 @@ exports.updateAccount = async ({userId, type, price, timeout = false}) => {
     let account = await Account.findOneAndUpdate({userId: userId, lock: false}, {$set: {lock: true}}, {new: true});
     let n = 1;
     while (!account) {
+        if (timeout && n >= 30) throw new Error('Account operation busy');
         await new Promise(s => setTimeout(s, 100));
         account = await Account.findOneAndUpdate({userId: userId, lock: false}, {$set: {lock: true}}, {new: true});
         n++;
-        if (timeout && n >= 30) throw new Error('Account operation busy');
     }
     let error = "";
     switch (type) {
