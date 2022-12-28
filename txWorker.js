@@ -219,6 +219,7 @@ class Worker extends EventEmitter {
 class ExWorker extends EventEmitter {
     constructor(workerId, queue) {
         super();
+        console.log(workerId)
         this.workerId = workerId;
         this.queue = queue;
     }
@@ -249,7 +250,7 @@ class ExWorker extends EventEmitter {
     }
 
     async getMsg() {
-        console.log('exWorker getMsg'.blue.bold);
+        // console.log(`exWorker getMsg`.blue.bold);
         if (this.findList) {
             console.log('exWorker query IntTASK'.blue.bold);
             this.subInfo = await SubList.findOne({
@@ -268,7 +269,7 @@ class ExWorker extends EventEmitter {
 
         this.findList = false;
         const queueMsg = await this.queue.getAsync();
-        console.log(`exWorker get a queue message ${queueMsg}`.blue.bold);
+        console.log(`exWorker ${this.workerId} get a queue message ${queueMsg}`.blue.bold);
 
         if (!queueMsg) {
             setTimeout(() => {
@@ -328,13 +329,15 @@ const runTxWorker = async (conn) => {
 
 const runExWorker = (conn) => {
     const queue = P.promisifyAll(mongoDbQueue(conn.connection, 'exQueue', {visibility: 0}));
-    const worker = new ExWorker(1, queue);
-    worker.init();
-    worker.start();
+    const n = 10;
+    for (let i = 1; i <= n; i++) {
+        const worker = new ExWorker(i, queue);
+        worker.init();
+        worker.start();
+    }
 }
 
 const main = async () => {
-
     let conn = await DBConnection();
     runTxWorker(conn);
     runExWorker(conn);
