@@ -65,7 +65,7 @@ class Worker extends EventEmitter {
     }
 
     async validAccount() {
-        console.log("valid")
+        console.log(`${this.address} valid`)
         this.subInfo = null;
         if (this.balance.gt(minBalance) && this.tokenBalance.gt(minTokenBalance)) {
             this.emit('msg');
@@ -319,12 +319,16 @@ class ExWorker extends EventEmitter {
 }
 
 const runTxWorker = async (conn) => {
-    const mnemonic = process.env.MNEMONIC
-    const hdwallet = HDWallet.fromMnemonic(mnemonic)
     const queue = P.promisifyAll(mongoDbQueue(conn.connection, 'subQueue', {visibility: 0}))
-    const worker = new Worker(hdwallet.derive(`m/44'/60'/0'/0/0`), queue);
-    await worker.init();
-    worker.start();
+    const mnemonic = process.env.MNEMONIC
+    const hdWallet = HDWallet.fromMnemonic(mnemonic)
+    const deriveWallet = hdWallet.derive(`m/44'/60'/0'/0`);
+    const n = 5;
+    for (let i = 0; i < n; i++) {
+        const worker = new Worker(deriveWallet.derive(i), queue);
+        await worker.init();
+        worker.start();
+    }
 }
 
 const runExWorker = (conn) => {
